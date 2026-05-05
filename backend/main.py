@@ -51,7 +51,7 @@ def init_data():
                     name="Simple Chicken Salad",
                     description="A quick, healthy salad with grilled chicken.",
                     instructions="1. Grill chicken breast and slice.\n2. Mix with lettuce, tomatoes, and cucumber.\n3. Drizzle with olive oil and lemon juice."
-                ),
+                ), 
                 Recipe(
                     name="Banana Oat Pancakes",
                     description="Easy pancakes using banana and oats.",
