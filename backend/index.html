@@ -149,7 +149,7 @@
         let weekChart = null;
 
         document.addEventListener('DOMContentLoaded', async () => {
-            // 加载食物列表
+            // Load Food List
             try {
                 const res = await fetch(`${API_BASE}/api/foods/`);
                 if (!res.ok) {
