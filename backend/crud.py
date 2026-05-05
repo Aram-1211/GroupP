@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from datetime import date, timedelta
 from models import User, UserTarget, FoodItem, Meal, MealEntry, Recipe
-from schemas import MealCreate, TargetUpdate
+from schemas import MealCreate, TargetUpdate, MealOut, DaySummary, DailyStat, WeekSummary
 import math
 
 def get_user(db: Session, user_id: int = 1):
