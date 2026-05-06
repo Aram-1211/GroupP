@@ -6,11 +6,10 @@ manipulate user data, foods, meals and recipes.
 
 from datetime import date, timedelta
 
+from models import FoodItem, Meal, MealEntry, Recipe, User, UserTarget
+from schemas import (DailyStat, DaySummary, MealCreate, MealOut, TargetUpdate,
+                     WeekSummary)
 from sqlalchemy.orm import Session
-
-from models import User, UserTarget, FoodItem, Meal, MealEntry, Recipe
-from schemas import (MealCreate, TargetUpdate, MealOut, DaySummary,
-                     DailyStat, WeekSummary)
 
 
 def get_user(db: Session, user_id: int = 1):

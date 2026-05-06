@@ -1,12 +1,12 @@
 """Routes for recipe access."""
 
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
 from typing import List
-from database import get_db
-from schemas import RecipeOut
-import crud
 
+import crud
+from database import get_db
+from fastapi import APIRouter, Depends
+from schemas import RecipeOut
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/recipes", tags=["recipes"])
 

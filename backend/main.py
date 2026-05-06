@@ -6,15 +6,13 @@ the database with seed data and mounts static files.
 
 import os
 
+from database import Base, engine
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-
-from database import engine, Base
 from models import *  # noqa: Ensure table registration
-from models import User, UserTarget, FoodItem, Recipe
-from routers import foods, meals, stats, recipes
-
+from models import FoodItem, Recipe, User, UserTarget
+from routers import foods, meals, recipes, stats
 
 app = FastAPI()
 

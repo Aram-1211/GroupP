@@ -4,15 +4,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from sqlalchemy import create_engine  # noqa: E402
-from sqlalchemy.orm import sessionmaker  # noqa: E402
-
-from database import Base  # noqa: E402
 import models  # noqa: E402
+from database import Base  # noqa: E402
 from routers.foods import list_foods  # noqa: E402
 from routers.meals import add_meal, get_day_summary, remove_meal  # noqa: E402
-from routers.stats import get_target, update_target, get_week  # noqa: E402
+from routers.stats import get_target, get_week, update_target  # noqa: E402
 from schemas import MealCreate, TargetUpdate  # noqa: E402
+from sqlalchemy import create_engine  # noqa: E402
+from sqlalchemy.orm import sessionmaker  # noqa: E402
 
 
 def make_session():

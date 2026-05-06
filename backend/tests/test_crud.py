@@ -1,12 +1,13 @@
-from schemas import MealCreate, TargetUpdate
-from models import User, FoodItem, Recipe
-from database import Base
-import crud
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy import create_engine
 import sys
 from datetime import date, timedelta
 from pathlib import Path
+
+import crud
+from database import Base
+from models import FoodItem, Recipe, User
+from schemas import MealCreate, TargetUpdate
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 # Ensure backend package is importable
 sys.path.insert(0, str(Path(__file__).parent.parent))

@@ -1,12 +1,12 @@
 """Routes for meal CRUD operations."""
 
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
 from datetime import date
-from database import get_db
-from schemas import MealCreate, DaySummary
-import crud
 
+import crud
+from database import get_db
+from fastapi import APIRouter, Depends
+from schemas import DaySummary, MealCreate
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/meals", tags=["meals"])
 

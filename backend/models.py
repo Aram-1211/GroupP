@@ -4,10 +4,9 @@ This module defines SQLAlchemy ORM models used by the backend,
 including users, targets, food items, meals, meal entries, and recipes.
 """
 
-from sqlalchemy import Column, Integer, String, Float, Date, ForeignKey
-from sqlalchemy.orm import relationship
-
 from database import Base
+from sqlalchemy import Column, Date, Float, ForeignKey, Integer, String
+from sqlalchemy.orm import relationship
 
 
 class User(Base):

@@ -1,12 +1,12 @@
 """Statistics and target-related API routes."""
 
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
 from datetime import date
-from database import get_db
-from schemas import TargetOut, TargetUpdate, WeekSummary
-import crud
 
+import crud
+from database import get_db
+from fastapi import APIRouter, Depends
+from schemas import TargetOut, TargetUpdate, WeekSummary
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api", tags=["stats"])
 
