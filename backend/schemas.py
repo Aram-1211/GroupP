@@ -8,7 +8,7 @@ from typing import List, Optional
 from datetime import date
 
 
-# Food schemas
+# Food output schemas
 class FoodItemOut(BaseModel):
     """Output schema for a food item with nutrition per 100g."""
     id: int
@@ -19,7 +19,7 @@ class FoodItemOut(BaseModel):
     carbs_per_100g: float
     model_config = {"from_attributes": True}
 
-# Target schemas
+# Target input and output schemas
 class TargetOut(BaseModel):
     """Output schema for user's nutrition targets."""
     calories: float
@@ -35,7 +35,7 @@ class TargetUpdate(BaseModel):
     fat: float
     carbs: float
 
-# Meal schemas
+# Meal creation and summary schemas
 class MealCreate(BaseModel):
     """Input model for creating a meal with a single entry."""
     date: date
@@ -76,7 +76,7 @@ class WeekSummary(BaseModel):
     week_end: date
     daily_stats: List[DailyStat]
 
-# Recipe schemas
+# Recipe output schemas
 class RecipeOut(BaseModel):
     """Output schema for recipe records."""
     id: int

@@ -16,7 +16,7 @@ def get_target(db: Session = Depends(get_db)):
     """Return the user's nutrition target, creating a default if missing."""
     target = crud.get_target(db)
     if not target:
-        # create default target if missing
+        # Create a default target on first access for new users.
         target = crud.update_target(db, TargetUpdate(calories=2000, protein=50, fat=65, carbs=250))
     return target
 
