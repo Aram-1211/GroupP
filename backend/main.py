@@ -1,3 +1,9 @@
+"""Application entrypoint: FastAPI app and route registration.
+
+This module creates the FastAPI `app`, applies middleware, initializes
+the database with seed data and mounts static files.
+"""
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -7,6 +13,7 @@ from models import *  # noqa: Ensure table registration
 from sqlalchemy.orm import Session
 from models import User, UserTarget, FoodItem, Recipe
 import os
+
 
 app = FastAPI()
 
@@ -22,6 +29,11 @@ Base.metadata.create_all(bind=engine)
 
 # Initialize seed data (if the database is empty)
 def init_data():
+    """Seed initial data into the database if tables are empty.
+
+    Adds a default `User` and `UserTarget`, several `FoodItem` entries,
+    and example `Recipe` records when the corresponding tables are empty.
+    """
     from database import SessionLocal
     db = SessionLocal()
     try:

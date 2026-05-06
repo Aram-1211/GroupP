@@ -1,19 +1,32 @@
+"""CRUD helper functions for database operations.
+
+This module contains functions used by API endpoints to query and
+manipulate user data, foods, meals and recipes.
+"""
+
 from sqlalchemy.orm import Session
 from datetime import date, timedelta
 from models import User, UserTarget, FoodItem, Meal, MealEntry, Recipe
 from schemas import MealCreate, TargetUpdate, MealOut, DaySummary, DailyStat, WeekSummary
 import math
 
+
 def get_user(db: Session, user_id: int = 1):
+    """Return a `User` by id (defaults to user 1)."""
     return db.query(User).filter(User.id == user_id).first()
 
 def get_target(db: Session, user_id: int = 1):
+    """Get a user's `UserTarget` or None if not set."""
     user = get_user(db, user_id)
     if not user or not user.target:
         return None
     return user.target
 
 def update_target(db: Session, target_data: TargetUpdate, user_id: int = 1):
+    """Create or update a user's nutrition target from `TargetUpdate`.
+
+    Returns the created/updated `UserTarget` instance.
+    """
     target = get_target(db, user_id)
     if not target:
         target = UserTarget(user_id=user_id, **target_data.model_dump())
@@ -28,12 +41,17 @@ def update_target(db: Session, target_data: TargetUpdate, user_id: int = 1):
     return target
 
 def get_foods(db: Session, search: str = None):
+    """Return a list of `FoodItem` optionally filtered by name (case-insensitive)."""
     query = db.query(FoodItem)
     if search:
         query = query.filter(FoodItem.name.ilike(f"%{search}%"))
     return query.all()
 
 def create_meal(db: Session, meal_data: MealCreate, user_id: int = 1):
+    """Create a `Meal` and a single `MealEntry` from `MealCreate`.
+
+    Returns the created `Meal` instance.
+    """
     meal = Meal(date=meal_data.date, meal_type=meal_data.name, user_id=user_id)
     db.add(meal)
     db.flush()  # get meal.id
@@ -44,6 +62,10 @@ def create_meal(db: Session, meal_data: MealCreate, user_id: int = 1):
     return meal
 
 def get_meals_by_day(db: Session, day: date, user_id: int = 1):
+    """Aggregate meals for a given day and return a `DaySummary`.
+
+    Computes macronutrient totals and returns a `DaySummary` schema object.
+    """
     meals = db.query(Meal).filter(Meal.date == day, Meal.user_id == user_id).all()
     total = {"calories": 0, "protein": 0, "fat": 0, "carbs": 0}
     meal_list = []
@@ -72,6 +94,7 @@ def get_meals_by_day(db: Session, day: date, user_id: int = 1):
     return DaySummary(date=day, total=total, meals=meal_list)
 
 def delete_meal(db: Session, meal_id: int, user_id: int = 1):
+    """Delete a meal owned by `user_id`. Returns True if deleted."""
     meal = db.query(Meal).filter(Meal.id == meal_id, Meal.user_id == user_id).first()
     if meal:
         db.delete(meal)
@@ -80,6 +103,10 @@ def delete_meal(db: Session, meal_id: int, user_id: int = 1):
     return False
 
 def get_week_stats(db: Session, week_start: date, user_id: int = 1):
+    """Return `WeekSummary` for the week starting at `week_start`.
+
+    Aggregates daily statistics for seven days starting from `week_start`.
+    """
     week_end = week_start + timedelta(days=6)
     daily_stats = []
     for i in range(7):
@@ -97,4 +124,5 @@ def get_week_stats(db: Session, week_start: date, user_id: int = 1):
     return WeekSummary(week_start=week_start, week_end=week_end, daily_stats=daily_stats)
 
 def get_recipes(db: Session):
+    """Return all `Recipe` records."""
     return db.query(Recipe).all()
