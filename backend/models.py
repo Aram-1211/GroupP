@@ -6,7 +6,9 @@ including users, targets, food items, meals, meal entries, and recipes.
 
 from sqlalchemy import Column, Integer, String, Float, Date, ForeignKey
 from sqlalchemy.orm import relationship
+
 from database import Base
+
 
 class User(Base):
     """Represents an application user.
@@ -20,6 +22,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, default="Default User")
     target = relationship("UserTarget", back_populates="user", uselist=False)
+
 
 class UserTarget(Base):
     """Stores a user's daily nutrition targets.
@@ -37,6 +40,7 @@ class UserTarget(Base):
     carbs = Column(Float, default=250)
     user = relationship("User", back_populates="target")
 
+
 class FoodItem(Base):
     """A food item with nutrition per 100g.
 
@@ -50,6 +54,7 @@ class FoodItem(Base):
     fat_per_100g = Column(Float)
     carbs_per_100g = Column(Float)
 
+
 class Meal(Base):
     """A meal instance for a user on a specific date.
 
@@ -61,6 +66,7 @@ class Meal(Base):
     date = Column(Date)
     meal_type = Column(String)
     entries = relationship("MealEntry", back_populates="meal", cascade="all, delete-orphan")
+
 
 class MealEntry(Base):
     """A single food entry within a meal.
@@ -74,6 +80,7 @@ class MealEntry(Base):
     quantity_grams = Column(Float)
     meal = relationship("Meal", back_populates="entries")
     food = relationship("FoodItem")
+
 
 class Recipe(Base):
     """Simple recipe record with name, description and instructions."""

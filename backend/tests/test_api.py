@@ -1,34 +1,36 @@
 import sys
-from pathlib import Path
 from datetime import date
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from database import Base, get_db
-import models
-from main import app
-import crud
+from sqlalchemy import create_engine  # noqa: E402
+from sqlalchemy.orm import sessionmaker  # noqa: E402
+
+from database import Base  # noqa: E402
+import models  # noqa: E402
+from routers.foods import list_foods  # noqa: E402
+from routers.meals import add_meal, get_day_summary, remove_meal  # noqa: E402
+from routers.stats import get_target, update_target, get_week  # noqa: E402
+from schemas import MealCreate, TargetUpdate  # noqa: E402
 
 
 def make_session():
-    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
+    """Create an in-memory SQLite session for testing."""
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False}
+    )
     Base.metadata.create_all(bind=engine)
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    SessionLocal = sessionmaker(
+        autocommit=False, autoflush=False,
+        bind=engine
+    )
     return SessionLocal()
 
 
-def override_get_db(session):
-    def _get_db():
-        try:
-            yield session
-        finally:
-            pass
-    return _get_db
-
-
 def test_api_endpoints_flow():
+    """Test API endpoints through router functions."""
     session = make_session()
     # seed minimal user and food
     user = models.User(name="APIUser")
@@ -36,22 +38,24 @@ def test_api_endpoints_flow():
     session.commit()
     session.refresh(user)
 
-    food = models.FoodItem(name="APIApple", calories_per_100g=52, protein_per_100g=0.3, fat_per_100g=0.2, carbs_per_100g=14)
+    food = models.FoodItem(
+        name="APIApple", calories_per_100g=52,
+        protein_per_100g=0.3, fat_per_100g=0.2,
+        carbs_per_100g=14
+    )
     session.add(food)
     session.commit()
     session.refresh(food)
 
-    # Call router functions directly with the test session to avoid TestClient
-    from routers.foods import list_foods
-    from routers.meals import add_meal, get_day_summary, remove_meal
-    from routers.stats import get_target, update_target, get_week
-
+    # Test list_foods endpoint
     foods_list = list_foods(search="API", db=session)
     assert any("APIApple" in f.name for f in foods_list)
 
     # Add a meal via router function
-    from schemas import MealCreate
-    mc = MealCreate(date=date.today(), name="Lunch", food_id=food.id, quantity=100)
+    mc = MealCreate(
+        date=date.today(), name="Lunch", food_id=food.id,
+        quantity=100
+    )
     resp = add_meal(mc, db=session)
     assert resp.get("message") == "Meal created"
 
@@ -69,7 +73,6 @@ def test_api_endpoints_flow():
     assert t.calories == 2000
 
     # Update target
-    from schemas import TargetUpdate
     new_t = TargetUpdate(calories=1500, protein=70, fat=50, carbs=180)
     updated = update_target(new_t, db=session)
     assert updated.calories == 1500

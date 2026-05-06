@@ -1,26 +1,29 @@
+from schemas import MealCreate, TargetUpdate
+from models import User, FoodItem, Recipe
+from database import Base
+import crud
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine
 import sys
+from datetime import date, timedelta
 from pathlib import Path
-from datetime import date
 
 # Ensure backend package is importable
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from database import Base
-import models
-import crud
-from models import User, FoodItem
-
 
 def make_session():
-    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
+    """Create an in-memory SQLite session for testing."""
+    engine = create_engine("sqlite:///:memory:",
+                           connect_args={"check_same_thread": False})
     Base.metadata.create_all(bind=engine)
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False,
+                                bind=engine)
     return SessionLocal()
 
 
 def test_update_and_get_target():
+    """Test updating and retrieving user targets."""
     db = make_session()
     # Create a user
     user = User(name="Tester")
@@ -29,7 +32,6 @@ def test_update_and_get_target():
     db.refresh(user)
 
     # Update target for user
-    from schemas import TargetUpdate
     t = TargetUpdate(calories=1800, protein=60, fat=60, carbs=200)
     updated = crud.update_target(db, t, user_id=user.id)
     assert updated is not None
@@ -42,6 +44,7 @@ def test_update_and_get_target():
 
 
 def test_create_meal_and_get_meals_by_day():
+    """Test meal creation and daily summary."""
     db = make_session()
     # seed user and food
     user = User(name="MealUser")
@@ -49,14 +52,16 @@ def test_create_meal_and_get_meals_by_day():
     db.commit()
     db.refresh(user)
 
-    food = FoodItem(name="TestFood", calories_per_100g=200, protein_per_100g=10, fat_per_100g=5, carbs_per_100g=20)
+    food = FoodItem(name="TestFood", calories_per_100g=200,
+                    protein_per_100g=10, fat_per_100g=5,
+                    carbs_per_100g=20)
     db.add(food)
     db.commit()
     db.refresh(food)
 
     # Create a meal via crud
-    from schemas import MealCreate
-    mc = MealCreate(date=date.today(), name="Lunch", food_id=food.id, quantity=150)
+    mc = MealCreate(date=date.today(), name="Lunch", food_id=food.id,
+                    quantity=150)
     meal = crud.create_meal(db, mc, user_id=user.id)
     assert meal is not None
 
@@ -69,6 +74,7 @@ def test_create_meal_and_get_meals_by_day():
 
 
 def test_get_week_stats_and_delete_meal():
+    """Test weekly stats and meal deletion."""
     db = make_session()
     # create user and food
     user = User(name="WeekUser")
@@ -76,18 +82,19 @@ def test_get_week_stats_and_delete_meal():
     db.commit()
     db.refresh(user)
 
-    food = FoodItem(name="WeekFood", calories_per_100g=100, protein_per_100g=5, fat_per_100g=2, carbs_per_100g=10)
+    food = FoodItem(name="WeekFood", calories_per_100g=100,
+                    protein_per_100g=5, fat_per_100g=2,
+                    carbs_per_100g=10)
     db.add(food)
     db.commit()
     db.refresh(food)
 
-    from schemas import MealCreate
     # create meals on three different days within the same week
-    from datetime import date, timedelta
     today = date.today()
     for i in range(3):
         d = today - timedelta(days=i)
-        mc = MealCreate(date=d, name=f"Meal{i}", food_id=food.id, quantity=100)
+        mc = MealCreate(date=d, name=f"Meal{i}", food_id=food.id,
+                        quantity=100)
         m = crud.create_meal(db, mc, user_id=user.id)
 
     week_start = today - timedelta(days=today.weekday())
@@ -103,12 +110,15 @@ def test_get_week_stats_and_delete_meal():
 
 
 def test_get_foods_and_recipes():
+    """Test fetching foods and recipes."""
     db = make_session()
     # seed food and recipe
-    f1 = FoodItem(name="Apple", calories_per_100g=52, protein_per_100g=0.3, fat_per_100g=0.2, carbs_per_100g=14)
+    f1 = FoodItem(name="Apple", calories_per_100g=52,
+                  protein_per_100g=0.3, fat_per_100g=0.2,
+                  carbs_per_100g=14)
     db.add(f1)
-    from models import Recipe
-    r = Recipe(name="TestRecipe", description="Desc", instructions="Do things")
+    r = Recipe(name="TestRecipe", description="Desc",
+               instructions="Do things")
     db.add(r)
     db.commit()
 

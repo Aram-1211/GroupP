@@ -17,7 +17,8 @@ def get_target(db: Session = Depends(get_db)):
     target = crud.get_target(db)
     if not target:
         # Create a default target on first access for new users.
-        target = crud.update_target(db, TargetUpdate(calories=2000, protein=50, fat=65, carbs=250))
+        target = crud.update_target(db, TargetUpdate(
+            calories=2000, protein=50, fat=65, carbs=250))
     return target
 
 

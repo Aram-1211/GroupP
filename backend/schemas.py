@@ -3,9 +3,10 @@
 Defines request and response models used by the FastAPI endpoints.
 """
 
-from pydantic import BaseModel
-from typing import List, Optional
 from datetime import date
+from typing import List
+
+from pydantic import BaseModel
 
 
 # Food output schemas
@@ -19,6 +20,7 @@ class FoodItemOut(BaseModel):
     carbs_per_100g: float
     model_config = {"from_attributes": True}
 
+
 # Target input and output schemas
 class TargetOut(BaseModel):
     """Output schema for user's nutrition targets."""
@@ -28,12 +30,14 @@ class TargetOut(BaseModel):
     carbs: float
     model_config = {"from_attributes": True}
 
+
 class TargetUpdate(BaseModel):
     """Input schema used to update a user's nutrition target."""
     calories: float
     protein: float
     fat: float
     carbs: float
+
 
 # Meal creation and summary schemas
 class MealCreate(BaseModel):
@@ -42,6 +46,7 @@ class MealCreate(BaseModel):
     name: str
     food_id: int
     quantity: float
+
 
 class MealOut(BaseModel):
     """Output schema for a meal entry with computed nutrition values."""
@@ -55,11 +60,13 @@ class MealOut(BaseModel):
     carbs: float
     model_config = {"from_attributes": True}
 
+
 class DaySummary(BaseModel):
     """Aggregated daily summary including totals and list of meals."""
     date: date
     total: dict        # {"calories": float, "protein": ..., "fat": ..., "carbs": ...}
     meals: List[MealOut]
+
 
 class DailyStat(BaseModel):
     """Per-day stat used in week summaries."""
@@ -70,11 +77,13 @@ class DailyStat(BaseModel):
     fat: float
     carbs: float
 
+
 class WeekSummary(BaseModel):
     """Weekly aggregation containing a list of `DailyStat`."""
     week_start: date
     week_end: date
     daily_stats: List[DailyStat]
+
 
 # Recipe output schemas
 class RecipeOut(BaseModel):

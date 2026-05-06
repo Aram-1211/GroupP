@@ -1,10 +1,11 @@
-import pytest
-from fastapi.testclient import TestClient
 import sys
 from pathlib import Path
 
+import pytest
+
 # Add backend to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
+
 
 # Simple placeholder test that will pass
 def test_placeholder():
