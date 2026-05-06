@@ -73,7 +73,10 @@ def get_meals_by_day(db: Session, day: date, user_id: int = 1):
         for entry in meal.entries:
             food = entry.food
             # Convert the per-100g nutrition values to the actual serving size.
+            # `quantity_grams` is the recorded serving size in grams; dividing by
+            # 100 gives the multiplier to apply to the per-100g nutrition fields.
             q = entry.quantity_grams / 100
+            # Multiply per-100g values by the multiplier to get per-serving values.
             calorie = food.calories_per_100g * q
             protein = food.protein_per_100g * q
             fat = food.fat_per_100g * q
@@ -115,6 +118,8 @@ def get_week_stats(db: Session, week_start: date, user_id: int = 1):
         summary = get_meals_by_day(db, day, user_id)
         # Use a short weekday label for compact chart/table display.
         day_name = day.strftime("%A")[:3]
+        # Round aggregated totals to one decimal place for consistent UI display
+        # and to avoid floating point noise in charts or reports.
         daily_stats.append(DailyStat(
             date=day,
             day_name=day_name,
