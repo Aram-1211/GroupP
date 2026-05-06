@@ -24,10 +24,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Create table
+# Create database tables from ORM models
 Base.metadata.create_all(bind=engine)
 
-# Initialize seed data (if the database is empty)
+# Initialize seed data if tables are empty
 def init_data():
     """Seed initial data into the database if tables are empty.
 
@@ -77,13 +77,13 @@ def init_data():
 
 init_data()
 
-# Register Route (must be before static files mount)
+# Register routers (must be before static files mount)
 app.include_router(foods.router)
 app.include_router(meals.router)
 app.include_router(stats.router)
 app.include_router(recipes.router)
 
-# Mount static files (last, as catch-all)
+# Mount static files as a catch-all endpoint
 app.mount("/", StaticFiles(directory=os.path.dirname(__file__), html=True), name="static")
 
 if __name__ == "__main__":

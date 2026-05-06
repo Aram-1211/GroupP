@@ -54,7 +54,7 @@ def create_meal(db: Session, meal_data: MealCreate, user_id: int = 1):
     """
     meal = Meal(date=meal_data.date, meal_type=meal_data.name, user_id=user_id)
     db.add(meal)
-    db.flush()  # get meal.id
+    db.flush()  # populate meal.id after insert
     entry = MealEntry(meal_id=meal.id, food_id=meal_data.food_id, quantity_grams=meal_data.quantity)
     db.add(entry)
     db.commit()
@@ -112,7 +112,7 @@ def get_week_stats(db: Session, week_start: date, user_id: int = 1):
     for i in range(7):
         day = week_start + timedelta(days=i)
         summary = get_meals_by_day(db, day, user_id)
-        day_name = day.strftime("%A")[:3]  # Mon, Tue...
+        day_name = day.strftime("%A")[:3]  # abbreviated weekday (Mon, Tue, ...)
         daily_stats.append(DailyStat(
             date=day,
             day_name=day_name,
