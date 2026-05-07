@@ -77,14 +77,22 @@ async function loadTarget() {
     updateMacroSummary();
 }
 
+function formatCalories(value) {
+    return Math.round(Number(value) || 0);
+}
+
+function formatMacro(value) {
+    return Number(value || 0).toFixed(1);
+}
+
 function updateMacroSummary(totals = null) {
     if (!totals) totals = { calories: 0, protein: 0, fat: 0, carbs: 0 };
 
     document.getElementById('macro-summary').innerHTML = `
-        <div class="macro-item"><span>Calories</span><span><strong>${totals.calories || 0}</strong> / ${currentTarget.calories}</span></div>
-        <div class="macro-item"><span>Protein</span><span><strong>${totals.protein || 0}</strong>g / ${currentTarget.protein}g</span></div>
-        <div class="macro-item"><span>Fat</span><span><strong>${totals.fat || 0}</strong>g / ${currentTarget.fat}g</span></div>
-        <div class="macro-item"><span>Carbs</span><span><strong>${totals.carbs || 0}</strong>g / ${currentTarget.carbs}g</span></div>
+        <div class="macro-item"><span>Calories</span><span><strong>${formatCalories(totals.calories)}</strong> / ${formatCalories(currentTarget.calories)}</span></div>
+        <div class="macro-item"><span>Protein</span><span><strong>${formatMacro(totals.protein)}</strong>g / ${formatMacro(currentTarget.protein)}g</span></div>
+        <div class="macro-item"><span>Fat</span><span><strong>${formatMacro(totals.fat)}</strong>g / ${formatMacro(currentTarget.fat)}g</span></div>
+        <div class="macro-item"><span>Carbs</span><span><strong>${formatMacro(totals.carbs)}</strong>g / ${formatMacro(currentTarget.carbs)}g</span></div>
     `;
 }
 
@@ -125,10 +133,10 @@ async function loadDayMeals(day) {
     </p>
 
     <small>
-        Cal: ${m.calories}
-        | P: ${m.protein}g
-        | F: ${m.fat}g
-        | C: ${m.carbs}g
+        Cal: ${formatCalories(m.calories)}
+        | P: ${formatMacro(m.protein)}g
+        | F: ${formatMacro(m.fat)}g
+        | C: ${formatMacro(m.carbs)}g
     </small>
 </div>
                 `).join('');
@@ -173,6 +181,20 @@ async function loadWeekStats(weekStart) {
             },
             options: {
                 responsive: true,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label(context) {
+                                const label = context.dataset.label || '';
+                                const value = context.parsed?.y ?? context.parsed ?? 0;
+                                const formattedValue = label.includes('Calories')
+                                    ? formatCalories(value)
+                                    : formatMacro(value);
+                                return `${label}: ${formattedValue}`;
+                            }
+                        }
+                    }
+                },
                 onClick: async (e) => {
                     const points = weekChart.getElementsAtEventForMode(e, 'nearest', { intersect: false }, true);
 
@@ -243,7 +265,7 @@ async function loadSelectedDayMeals(day) {
         }
 
         container.innerHTML = `
-                    <p class="small">Total: Cal: ${data.total.calories} | P: ${data.total.protein}g | F: ${data.total.fat}g | C: ${data.total.carbs}g</p>
+                    <p class="small">Total: Cal: ${formatCalories(data.total.calories)} | P: ${formatMacro(data.total.protein)}g | F: ${formatMacro(data.total.fat)}g | C: ${formatMacro(data.total.carbs)}g</p>
                     ${data.meals.map(m => `
                         <div class="meal-item">
                             <h6>${m.name}</h6>
