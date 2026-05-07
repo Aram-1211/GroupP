@@ -145,12 +145,20 @@ async function loadDayMeals(day) {
     }
 }
 
-async function deleteMeal(mealId) {
+async function deleteMeal(mealId, selectedDayStr = null) {
     await fetch(`${API_BASE}/api/meals/${mealId}`, { method: 'DELETE' });
-    await loadDayMeals(new Date());
+
+    if (currentView === 'weekly' && selectedDayStr) {
+        const selectedDay = parseLocalDateString(selectedDayStr);
+        const weekStart = new Date(selectedDay);
+        weekStart.setDate(selectedDay.getDate() - selectedDay.getDay() + 1);
+        await loadWeekStats(weekStart, selectedDayStr);
+    } else {
+        await loadDayMeals(new Date());
+    }
 }
 
-async function loadWeekStats(weekStart) {
+async function loadWeekStats(weekStart, selectedDayStr = null) {
     const startStr = getLocalDateString(weekStart);
     try {
         const res = await fetch(`${API_BASE}/api/stats/week/${startStr}`);
@@ -221,13 +229,17 @@ async function loadWeekStats(weekStart) {
                     </button>
                 `).join('');
 
-        // Select today by default if it is in the returned week.
-        const today = getLocalDateString(new Date());
-        const todayStats = data.daily_stats.find(d => d.date === today);
-        if (todayStats) {
-            await selectDayByDateString(todayStats.date);
+        // Select the preserved selected day if provided, otherwise default to today or first day.
+        if (selectedDayStr) {
+            await selectDayByDateString(selectedDayStr);
         } else {
-            await selectDayByDateString(data.daily_stats[0].date);
+            const today = getLocalDateString(new Date());
+            const todayStats = data.daily_stats.find(d => d.date === today);
+            if (todayStats) {
+                await selectDayByDateString(todayStats.date);
+            } else {
+                await selectDayByDateString(data.daily_stats[0].date);
+            }
         }
     } catch (e) {
         console.error('Week stats error:', e);
@@ -268,7 +280,15 @@ async function loadSelectedDayMeals(day) {
                     <p class="small">Total: Cal: ${formatCalories(data.total.calories)} | P: ${formatMacro(data.total.protein)}g | F: ${formatMacro(data.total.fat)}g | C: ${formatMacro(data.total.carbs)}g</p>
                     ${data.meals.map(m => `
                         <div class="meal-item">
-                            <h6>${m.name}</h6>
+                            <div class="d-flex justify-content-between">
+                                <h6>${m.name}</h6>
+                                <button
+                                    class="btn btn-sm btn-outline-danger"
+                                    onclick="deleteMeal(${m.id}, '${dayStr}')"
+                                >
+                                    ×
+                                </button>
+                            </div>
                             <p class="text-muted small mb-0">${m.food_name} - ${m.quantity}g</p>
                         </div>
                     `).join('')}
