@@ -1,4 +1,4 @@
-
+// Aca
         const API_BASE = window.location.protocol === 'file:'
             ? 'http://localhost:8000'
             : window.location.origin;
@@ -108,14 +108,29 @@
                 }
 
                 mealsList.innerHTML = data.meals.map(m => `
-                    <div class="meal-item">
-                        <div class="d-flex justify-content-between">
-                            <h6>${m.name}</h6>
-                            <button class="btn btn-sm btn-outline-danger" onclick="deleteMeal(${m.id})">×</button>
-                        </div>
-                        <p class="text-muted mb-1">${m.food_name} - ${m.quantity}g</p>
-                        <small>Cal: ${m.calories} | P: ${m.protein}g | F: ${m.fat}g | C: ${m.carbs}g</small>
-                    </div>
+                    div class="meal-item">
+    <div class="d-flex justify-content-between">
+        <h6>${m.name}</h6>
+
+        <button
+            class="btn btn-sm btn-outline-danger"
+            onclick="deleteMeal(${m.id})"
+        >
+            ×
+        </button>
+    </div>
+
+    <p class="text-muted small mb-0">
+        ${m.food_name} - ${m.quantity}g
+    </p>
+
+    <small>
+        Cal: ${m.calories}
+        | P: ${m.protein}g
+        | F: ${m.fat}g
+        | C: ${m.carbs}g
+    </small>
+</div>
                 `).join('');
             } catch(e) {
                 document.getElementById('meals-list').innerHTML = '<p class="text-muted">Could not load meals.</p>';
@@ -158,21 +173,41 @@
                     },
                     options: {
                         responsive: true,
-                        onClick: async (e, elements) => {
-                            if (elements.length) {
-                                const idx = elements[0].index;
-                                const dayDate = data.daily_stats[idx].date;
-                                await loadSelectedDayMeals(new Date(dayDate));
-                            }
+                        onClick: async(e) => {
+                            
+                            const points = weekChart.getElementsAtEventForMode(e, 'nearest', { intersect: false }, true);
+
+                            if (points.length) {
+                                const index = points[0].index;
+                                const dayDate = data.daily_stats[index].date;
+                                await selectDayByDateString(dayDate);
                         }
+
                     }
-                });
+                }                });
+
+                // Render clickable day buttons
+                const dayButtonsContainer = document.getElementById('week-day-buttons');
+                dayButtonsContainer.innerHTML = data.daily_stats.map((day, index) => `
+                    <button 
+                        class="btn btn-sm btn-outline-secondary" 
+                        data-date="${day.date}"
+                        style="padding: 6px 4px; font-size: 0.75rem; width: 100%;"
+                        onclick="selectDayByDateString('${day.date}')"
+                    >
+                        <div>${day.day_name}</div>
+                        <small style="display: block; line-height: 1.2;">${day.date}</small>
+                    </button>
+                `).join('');
 
                 // Select today by default
                 const today = new Date().toISOString().split('T')[0];
                 const todayStats = data.daily_stats.find(d => d.date === today);
                 if (todayStats) {
-                    await loadSelectedDayMeals(new Date(todayStats.date));
+                    await selectDayByDateString(todayStats.date);
+                } else {
+                    // If today is not in the week stats, select the first day
+                    await selectDayByDateString(data.daily_stats[0].date);
                 }
             } catch(e) {
                 console.error("Week stats error:", e);
@@ -186,6 +221,12 @@
                 const res = await fetch(`${API_BASE}/api/meals/day/${dayStr}`);
                 const data = await res.json();
                 const container = document.getElementById('selected-day-meals');
+                
+                // Update macro summary for the weekly view
+                if (currentView === 'weekly') {
+                    updateMacroSummary(data.total);
+                }
+                
                 if (!data.meals.length) {
                     container.innerHTML = '<p class="text-muted">No meals for this day.</p>';
                     return;
@@ -202,6 +243,40 @@
             } catch(e) {
                 document.getElementById('selected-day-meals').innerHTML = '<p class="text-muted">Error loading.</p>';
             }
+        }
+
+        async function loadSelectedDailyMeals(day) {
+            await loadSelectedDayMeals(day);
+            
+            // Highlight the selected day button
+            const dayStr = day.toISOString().split('T')[0];
+            const buttons = document.querySelectorAll('#week-day-buttons button');
+            buttons.forEach(btn => {
+                if (btn.dataset.date === dayStr) {
+                    btn.classList.remove('btn-outline-secondary');
+                    btn.classList.add('btn-primary');
+                } else {
+                    btn.classList.remove('btn-primary');
+                    btn.classList.add('btn-outline-secondary');
+                }
+            });
+        }
+
+        async function selectDayByDateString(dateStr) {
+            // Highlight the button immediately
+            const buttons = document.querySelectorAll('#week-day-buttons button');
+            buttons.forEach(btn => {
+                if (btn.dataset.date === dateStr) {
+                    btn.classList.remove('btn-outline-secondary');
+                    btn.classList.add('btn-primary');
+                } else {
+                    btn.classList.remove('btn-primary');
+                    btn.classList.add('btn-outline-secondary');
+                }
+            });
+            
+            // Load the meals for that day
+            await loadSelectedDayMeals(new Date(dateStr + 'T00:00:00'));
         }
 
         function switchView(view) {
