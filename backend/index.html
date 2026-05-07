@@ -4,90 +4,190 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nutrition Tracker</title>
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="app.js"></script>
 </head>
+
 <body>
-    <div class="container mt-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4 id="header-date">Your Day - Today</h4>
-            <div class="btn-group">
-                <button class="btn btn-sm btn-primary" id="btn-daily">Daily</button>
-                <button class="btn btn-sm btn-outline-primary" id="btn-weekly">Weekly</button>
-            </div>
-        </div>
 
-        <div class="macro-card">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <h5>Macro Summary</h5>
-                <button class="btn btn-sm btn-outline-secondary" id="btn-edit-target">Edit Target</button>
-            </div>
-            <div id="macro-summary"></div>
-        </div>
+    <div class="app-shell">
+        <div class="container app-container py-4">
 
-        <div id="daily-view">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5>Meals</h5>
-                <button class="btn btn-sm btn-primary" id="btn-add-meal">Add Meal</button>
-            </div>
-            <div id="meals-list"></div>
-        </div>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4 id="header-date">Your Day - Today</h4>
 
-        <div id="weekly-view" style="display: none;">
-            <h5>Weekly Macro Trends</h5>
-            <canvas id="week-chart" height="250"></canvas>
-            <div class="mt-4">
-                <h6 id="selected-day-title">Selected Day: Today</h6>
-                <div id="selected-day-meals"></div>
+                <div class="btn-group">
+                    <button class="btn btn-sm btn-primary" id="btn-daily">Daily</button>
+                    <button class="btn btn-sm btn-outline-primary" id="btn-weekly">Weekly</button>
+                </div>
             </div>
+
+            <div class="macro-card">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h5>Macro Summary</h5>
+
+                    <button class="btn btn-sm btn-outline-secondary" id="btn-edit-target">
+                        Edit Target
+                    </button>
+                </div>
+
+                <div id="macro-summary"></div>
+            </div>
+
+            <div id="daily-view">
+
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5>Meals</h5>
+
+                    <button class="btn btn-sm btn-primary" id="btn-add-meal">
+                        Add Meal
+                    </button>
+                </div>
+
+                <div id="meals-list"></div>
+
+            </div>
+
+            <div id="weekly-view" style="display: none;">
+
+                <h5>Weekly Macro Trends</h5>
+
+                <canvas id="week-chart" height="250"></canvas>
+
+                <div class="mt-4">
+
+                    <h6 id="selected-day-title">
+                        Selected Day: Today
+                    </h6>
+
+                    <div id="selected-day-meals"></div>
+
+                </div>
+            </div>
+
         </div>
     </div>
 
     <div class="bottom-nav">
-        <button class="nav-btn active" id="nav-dashboard" onclick="switchView('daily')">
-            <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.1-4-4L2 16.99l1.5 1.5z"/></svg>
+
+        <button
+            class="nav-btn active"
+            id="nav-dashboard"
+            onclick="switchView('daily')"
+        >
+            <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.1-4-4L2 16.99l1.5 1.5z"/>
+            </svg>
+
             <small>Dashboard</small>
         </button>
-        <button class="nav-btn" id="nav-add" onclick="new bootstrap.Modal(document.getElementById('addMealModal')).show()">
-            <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+
+        <button
+            class="nav-btn"
+            id="nav-add"
+            onclick="new bootstrap.Modal(document.getElementById('addMealModal')).show()"
+        >
+            <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+            </svg>
+
             <small>Add</small>
         </button>
-        <button class="nav-btn" id="nav-recipes" onclick="loadRecipes()">
-            <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/></svg>
+
+        <button
+            class="nav-btn"
+            id="nav-recipes"
+            onclick="loadRecipes()"
+        >
+            <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/>
+            </svg>
+
             <small>Recipes</small>
         </button>
+
     </div>
 
     <!-- Add Meal Modal -->
     <div class="modal fade" id="addMealModal" tabindex="-1">
+
         <div class="modal-dialog">
             <div class="modal-content">
+
                 <div class="modal-header">
                     <h5 class="modal-title">Add New Meal</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+
+                    <button
+                        type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                    ></button>
                 </div>
+
                 <div class="modal-body">
+
                     <form id="add-meal-form">
+
                         <div class="mb-3">
                             <label class="form-label">Date</label>
-                            <input type="date" class="form-control" id="meal-date" required>
+
+                            <input
+                                type="date"
+                                class="form-control"
+                                id="meal-date"
+                                required
+                            >
                         </div>
+
                         <div class="mb-3">
-                            <label class="form-label">Meal Name (e.g. Breakfast)</label>
-                            <input type="text" class="form-control" id="meal-name" required>
+                            <label class="form-label">
+                                Meal Name (e.g. Breakfast)
+                            </label>
+
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="meal-name"
+                                required
+                            >
                         </div>
+
                         <div class="mb-3">
                             <label class="form-label">Food</label>
-                            <select class="form-select" id="meal-food" required></select>
+
+                            <select
+                                class="form-select"
+                                id="meal-food"
+                                required
+                            ></select>
                         </div>
+
                         <div class="mb-3">
-                            <label class="form-label">Quantity (grams)</label>
-                            <input type="number" class="form-control" id="meal-quantity" min="1" required>
+                            <label class="form-label">
+                                Quantity (grams)
+                            </label>
+
+                            <input
+                                type="number"
+                                class="form-control"
+                                id="meal-quantity"
+                                min="1"
+                                required
+                            >
                         </div>
-                        <button type="submit" class="btn btn-primary w-100">Add Meal</button>
+
+                        <button
+                            type="submit"
+                            class="btn btn-primary w-100"
+                        >
+                            Add Meal
+                        </button>
+
                     </form>
+
                 </div>
             </div>
         </div>
@@ -95,20 +195,88 @@
 
     <!-- Edit Target Modal -->
     <div class="modal fade" id="editTargetModal" tabindex="-1">
+
         <div class="modal-dialog">
             <div class="modal-content">
+
                 <div class="modal-header">
                     <h5 class="modal-title">Edit Nutrition Target</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+
+                    <button
+                        type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                    ></button>
                 </div>
+
                 <div class="modal-body">
+
                     <form id="edit-target-form">
-                        <div class="mb-3"><label class="form-label">Calories Target</label><input type="number" class="form-control" id="target-calories" required></div>
-                        <div class="mb-3"><label class="form-label">Protein Target (g)</label><input type="number" step="0.1" class="form-control" id="target-protein" required></div>
-                        <div class="mb-3"><label class="form-label">Fat Target (g)</label><input type="number" step="0.1" class="form-control" id="target-fat" required></div>
-                        <div class="mb-3"><label class="form-label">Carbs Target (g)</label><input type="number" step="0.1" class="form-control" id="target-carbs" required></div>
-                        <button type="submit" class="btn btn-primary w-100">Save Target</button>
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                Calories Target
+                            </label>
+
+                            <input
+                                type="number"
+                                class="form-control"
+                                id="target-calories"
+                                required
+                            >
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                Protein Target (g)
+                            </label>
+
+                            <input
+                                type="number"
+                                step="0.1"
+                                class="form-control"
+                                id="target-protein"
+                                required
+                            >
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                Fat Target (g)
+                            </label>
+
+                            <input
+                                type="number"
+                                step="0.1"
+                                class="form-control"
+                                id="target-fat"
+                                required
+                            >
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                Carbs Target (g)
+                            </label>
+
+                            <input
+                                type="number"
+                                step="0.1"
+                                class="form-control"
+                                id="target-carbs"
+                                required
+                            >
+                        </div>
+
+                        <button
+                            type="submit"
+                            class="btn btn-primary w-100"
+                        >
+                            Save Target
+                        </button>
+
                     </form>
+
                 </div>
             </div>
         </div>
@@ -116,17 +284,28 @@
 
     <!-- Recipes Modal -->
     <div class="modal fade" id="recipesModal" tabindex="-1">
+
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
+
                 <div class="modal-header">
                     <h5 class="modal-title">Recipes</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+
+                    <button
+                        type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                    ></button>
                 </div>
+
                 <div class="modal-body" id="recipes-list"></div>
+
             </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="app.js"></script>
+
 </body>
 </html>
