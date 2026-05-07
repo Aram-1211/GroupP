@@ -6,6 +6,7 @@ let currentView = 'daily';
 let currentTarget = null;
 let foods = [];
 let weekChart = null;
+let currentChartMode = 'calories';
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Load the available food items for meal creation.
@@ -53,6 +54,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Bind UI controls to actions.
     document.getElementById('btn-daily').addEventListener('click', () => switchView('daily'));
     document.getElementById('btn-weekly').addEventListener('click', () => switchView('weekly'));
+    document.getElementById('btn-calories').addEventListener('click', () => switchChartMode('calories'));
+    document.getElementById('btn-macronutrients').addEventListener('click', () => switchChartMode('macronutrients'));
     document.getElementById('btn-add-meal').addEventListener('click', () => {
         new bootstrap.Modal(document.getElementById('addMealModal')).show();
     });
@@ -65,6 +68,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     document.getElementById('add-meal-form').addEventListener('submit', addMeal);
     document.getElementById('edit-target-form').addEventListener('submit', updateTarget);
+
+    updateChartModeButtons();
 });
 
 async function loadTarget() {
@@ -174,31 +179,56 @@ async function loadWeekStats(weekStart, selectedDayStr = null) {
         const fat = data.daily_stats.map(d => d.fat);
         const carbs = data.daily_stats.map(d => d.carbs);
 
+        let datasets;
+        if (currentChartMode === 'calories') {
+            datasets = [
+                { label: 'Calories', data: calories, backgroundColor: '#0d6efd' }
+            ];
+        } else {
+            datasets = [
+                { label: 'Protein', data: protein.map(p => p * 4), backgroundColor: '#198754', stack: 'macros' },
+                { label: 'Fat', data: fat.map(f => f * 9), backgroundColor: '#ffc107', stack: 'macros' },
+                { label: 'Carbs', data: carbs.map(c => c * 4), backgroundColor: '#dc3545', stack: 'macros' }
+            ];
+        }
+
         if (weekChart) weekChart.destroy();
         const ctx = document.getElementById('week-chart').getContext('2d');
         weekChart = new Chart(ctx, {
-            type: 'line',
+            type: 'bar',
             data: {
                 labels,
-                datasets: [
-                    { label: 'Calories', data: calories, borderColor: '#0d6efd', tension: 0.1 },
-                    { label: 'Protein (g)', data: protein, borderColor: '#198754', tension: 0.1 },
-                    { label: 'Fat (g)', data: fat, borderColor: '#ffc107', tension: 0.1 },
-                    { label: 'Carbs (g)', data: carbs, borderColor: '#dc3545', tension: 0.1 }
-                ]
+                datasets
             },
             options: {
                 responsive: true,
+                scales: {
+                    x: {
+                        beginAtZero: true
+                    },
+                    y: {
+                        beginAtZero: true,
+                        stacked: currentChartMode === 'macronutrients'
+                    }
+                },
                 plugins: {
                     tooltip: {
                         callbacks: {
                             label(context) {
                                 const label = context.dataset.label || '';
                                 const value = context.parsed?.y ?? context.parsed ?? 0;
-                                const formattedValue = label.includes('Calories')
-                                    ? formatCalories(value)
-                                    : formatMacro(value);
-                                return `${label}: ${formattedValue}`;
+
+                                if (label === 'Protein' || label === 'Fat' || label === 'Carbs') {
+                                    let grams;
+                                    if (label === 'Protein' || label === 'Carbs') {
+                                        grams = value / 4;
+                                    } else if (label === 'Fat') {
+                                        grams = value / 9;
+                                    }
+                                    return `${label}: ${formatCalories(value)} kcal (${formatMacro(grams)}g)`;
+                                } else {
+                                    return `${label}: ${formatCalories(value)}`;
+                                }
                             }
                         }
                     }
@@ -344,6 +374,32 @@ function switchView(view) {
         const weekStart = new Date(today);
         weekStart.setDate(today.getDate() - today.getDay() + 1);
         loadWeekStats(weekStart);
+    }
+}
+
+function switchChartMode(mode) {
+    if (currentChartMode === mode) return;
+    currentChartMode = mode;
+    updateChartModeButtons();
+
+    if (currentView === 'weekly') {
+        const today = new Date();
+        const weekStart = new Date(today);
+        weekStart.setDate(today.getDate() - today.getDay() + 1);
+        loadWeekStats(weekStart);
+    }
+}
+
+function updateChartModeButtons() {
+    const caloriesBtn = document.getElementById('btn-calories');
+    const macrosBtn = document.getElementById('btn-macronutrients');
+
+    if (currentChartMode === 'calories') {
+        caloriesBtn.className = 'btn btn-sm btn-primary';
+        macrosBtn.className = 'btn btn-sm btn-outline-primary';
+    } else {
+        caloriesBtn.className = 'btn btn-sm btn-outline-primary';
+        macrosBtn.className = 'btn btn-sm btn-primary';
     }
 }
 
