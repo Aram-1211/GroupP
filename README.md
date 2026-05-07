@@ -130,6 +130,29 @@ const login = async (email, password) => {
 {
   "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "token_type": "bearer",
+
+---
+
+## CI & Tests
+
+CI is configured in `.github/workflows/test.yml` and enforces the following:
+
+- Run `pytest` with coverage and fail the build if coverage is below 90%.
+- Run `flake8` and `isort` as checks; lint/import failures will fail CI.
+- Run `bandit` for a basic security scan.
+- Upload coverage reports to Codecov.
+
+Run tests locally:
+
+```bash
+pip install -r backend/requirements.txt
+pip install pytest pytest-cov flake8 isort bandit
+pytest backend/tests/ -q --cov=backend --cov-report=term
+```
+
+Coverage XML is written to `coverage.xml` for CI upload.
+
+If you want me to tweak the CI thresholds, add integration tests, or include dependency security scanning (e.g., `safety`), tell me which option you prefer.
   "user": {
     "id": "123e4567-e89b-12d3-a456-426614174000",
     "name": "John Doe",
