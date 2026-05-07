@@ -143,7 +143,7 @@ async function deleteMeal(mealId) {
 }
 
 async function loadWeekStats(weekStart) {
-    const startStr = weekStart.toISOString().split('T')[0];
+    const startStr = getLocalDateString(weekStart);
     try {
         const res = await fetch(`${API_BASE}/api/stats/week/${startStr}`);
         const data = await res.json();
@@ -200,7 +200,7 @@ async function loadWeekStats(weekStart) {
                 `).join('');
 
         // Select today by default if it is in the returned week.
-        const today = new Date().toISOString().split('T')[0];
+        const today = getLocalDateString(new Date());
         const todayStats = data.daily_stats.find(d => d.date === today);
         if (todayStats) {
             await selectDayByDateString(todayStats.date);
@@ -212,8 +212,20 @@ async function loadWeekStats(weekStart) {
     }
 }
 
+function getLocalDateString(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function parseLocalDateString(dateStr) {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day);
+}
+
 async function loadSelectedDayMeals(day) {
-    const dayStr = day.toISOString().split('T')[0];
+    const dayStr = getLocalDateString(day);
     document.getElementById('selected-day-title').textContent = `Selected Day: ${dayStr}`;
     try {
         const res = await fetch(`${API_BASE}/api/meals/day/${dayStr}`);
@@ -248,7 +260,7 @@ async function loadSelectedDailyMeals(day) {
     await loadSelectedDayMeals(day);
 
     // Highlight the selected day button in the week view.
-    const dayStr = day.toISOString().split('T')[0];
+    const dayStr = getLocalDateString(day);
     const buttons = document.querySelectorAll('#week-day-buttons button');
     buttons.forEach(btn => {
         if (btn.dataset.date === dayStr) {
@@ -274,7 +286,7 @@ async function selectDayByDateString(dateStr) {
         }
     });
 
-    await loadSelectedDayMeals(new Date(dateStr + 'T00:00:00'));
+    await loadSelectedDayMeals(parseLocalDateString(dateStr));
 }
 
 function switchView(view) {
