@@ -34,7 +34,7 @@ body {
     background: none;
     color: #666;
     transition: 0.2s ease;
-    padding:0% 0 20px;
+    padding:0 0 20px 0;
 }
 
 .nav-btn.active {
