@@ -1,0 +1,51 @@
+name: CI/CD Pipeline Test
+
+on:
+  push:
+    branches: [ main, Yiming-side ]
+  pull_request:
+    branches: [ main, Yiming-side ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r backend/requirements.txt
+        pip install pytest pytest-cov flake8 isort bandit codecov
+
+    - name: Run tests and enforce coverage
+      run: |
+        pytest backend/tests/ -v --cov=backend --cov-report=xml --cov-fail-under=90
+
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./coverage.xml
+        fail_ci_if_error: false
+
+    - name: Lint with flake8
+      run: |
+        pip install flake8
+        flake8 backend --max-line-length=100 --count
+
+    - name: Check imports with isort
+      run: |
+        pip install isort
+        isort backend --check-only
+
+    - name: Security scan with bandit
+      run: |
+        pip install bandit
+        bandit -r backend -lll

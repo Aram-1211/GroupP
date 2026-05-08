@@ -1,12 +1,18 @@
+"""Application entrypoint: FastAPI app and route registration.
+
+This module creates the FastAPI `app`, applies middleware, initializes
+the database with seed data and mounts static files.
+"""
+
+import os
+
+from database import Base, engine
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from database import engine, Base, get_db
-from routers import foods, meals, stats, recipes
 from models import *  # noqa: Ensure table registration
-from sqlalchemy.orm import Session
-from models import User, UserTarget, FoodItem, Recipe
-import os
+from models import FoodItem, Recipe, User, UserTarget
+from routers import foods, meals, recipes, stats
 
 app = FastAPI()
 
@@ -17,11 +23,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Create table
+# Create database tables before the app starts serving requests.
 Base.metadata.create_all(bind=engine)
 
-# Initialize seed data (if the database is empty)
+
 def init_data():
+    """Seed initial data into the database if tables are empty.
+
+    Adds a default `User` and `UserTarget`, several `FoodItem` entries,
+    and example `Recipe` records when the corresponding tables are empty.
+    """
     from database import SessionLocal
     db = SessionLocal()
     try:
@@ -29,7 +40,8 @@ def init_data():
             user = User(name="Default User")
             db.add(user)
             db.flush()
-            target = UserTarget(user_id=user.id, calories=2000, protein=50, fat=65, carbs=250)
+            target = UserTarget(user_id=user.id, calories=2000, protein=50,
+                                fat=65, carbs=250)
             db.add(target)
             db.commit()
         if db.query(FoodItem).count() == 0:
@@ -123,12 +135,20 @@ def init_data():
                 Recipe(
                     name="Simple Chicken Salad",
                     description="A quick, healthy salad with grilled chicken.",
-                    instructions="1. Grill chicken breast and slice.\n2. Mix with lettuce, tomatoes, and cucumber.\n3. Drizzle with olive oil and lemon juice."
-                ), 
+                    instructions=(
+                        "1. Grill chicken breast and slice.\n"
+                        "2. Mix with lettuce, tomatoes, and cucumber.\n"
+                        "3. Drizzle with olive oil and lemon juice."
+                    )
+                ),
                 Recipe(
                     name="Banana Oat Pancakes",
                     description="Easy pancakes using banana and oats.",
-                    instructions="1. Mash 1 banana.\n2. Mix with 1 cup oats, 1 egg, and a splash of milk.\n3. Fry in a non-stick pan."
+                    instructions=(
+                        "1. Mash 1 banana.\n"
+                        "2. Mix with 1 cup oats, 1 egg, and a splash of milk.\n"
+                        "3. Fry in a non-stick pan."
+                    )
                 )
             ]
             db.add_all(recipes)
@@ -136,16 +156,19 @@ def init_data():
     finally:
         db.close()
 
+
 init_data()
 
-# Register Route (must be before static files mount)
+# Register API routers before the static file catch-all.
 app.include_router(foods.router)
 app.include_router(meals.router)
 app.include_router(stats.router)
 app.include_router(recipes.router)
 
-# Mount static files (last, as catch-all)
-app.mount("/", StaticFiles(directory=os.path.dirname(__file__), html=True), name="static")
+# Serve the frontend assets from the backend directory.
+app.mount("/", StaticFiles(directory=os.path.dirname(__file__),
+          html=True), name="static")
+
 
 if __name__ == "__main__":
     import uvicorn
