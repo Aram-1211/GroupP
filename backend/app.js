@@ -2,6 +2,8 @@
 const API_BASE = window.location.protocol === 'file:'
     ? 'http://localhost:8000'
     : window.location.origin;
+const THEME_STORAGE_KEY = 'nutrition-tracker-theme';
+const themeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
 let currentView = 'daily';
 let currentTarget = null;
 let foods = [];
@@ -9,6 +11,87 @@ let weekChart = null;
 let currentChartMode = 'calories';
 let selectedNutritionGoal = null;
 let currentWeekStart = null;
+let currentThemeSetting = 'auto';
+
+// Dark MOde functions
+function readThemeSetting() {
+    try {
+        return localStorage.getItem(THEME_STORAGE_KEY) || 'auto';
+    } catch (error) {
+        return 'auto';
+    }
+}
+
+function storeThemeSetting(setting) {
+    try {
+        localStorage.setItem(THEME_STORAGE_KEY, setting);
+    } catch (error) {
+        // Ignore storage failures
+    }
+}
+
+function resolveTheme(setting) {
+    if (setting === 'dark') return 'dark';
+    if (setting === 'light') return 'light';
+
+    return themeMediaQuery.matches ? 'dark' : 'light';
+}
+
+function updateThemeButtons() {
+    const buttons = document.querySelectorAll('[data-theme-setting]');
+
+    buttons.forEach(button => {
+        const isActive = button.dataset.themeSetting === currentThemeSetting;
+
+        button.classList.toggle('btn-primary', isActive);
+        button.classList.toggle('btn-outline-secondary', !isActive);
+        button.classList.toggle('active', isActive);
+    });
+}
+
+function applyTheme(setting, persist = true) {
+    currentThemeSetting = setting;
+
+    if (persist) {
+        storeThemeSetting(setting);
+    }
+
+    const resolvedTheme = resolveTheme(setting);
+
+    document.documentElement.dataset.theme = resolvedTheme;
+    document.documentElement.dataset.themeSetting = setting;
+    document.documentElement.style.colorScheme = resolvedTheme;
+
+    updateThemeButtons();
+
+    if (weekChart) {
+        weekChart.update();
+    }
+}
+
+function initializeThemeMode() {
+    currentThemeSetting = readThemeSetting();
+
+    applyTheme(currentThemeSetting, false);
+
+    document.querySelectorAll('[data-theme-setting]').forEach(button => {
+        button.addEventListener('click', () => {
+            applyTheme(button.dataset.themeSetting);
+        });
+    });
+
+    const onSystemThemeChange = () => {
+        if (currentThemeSetting === 'auto') {
+            applyTheme('auto', false);
+        }
+    };
+
+    if (typeof themeMediaQuery.addEventListener === 'function') {
+        themeMediaQuery.addEventListener('change', onSystemThemeChange);
+    } else if (typeof themeMediaQuery.addListener === 'function') {
+        themeMediaQuery.addListener(onSystemThemeChange);
+    }
+}
 
 async function refreshFoodOptions(selectedFoodId = null) {
     const foodSelect = document.getElementById('meal-food');
@@ -76,6 +159,7 @@ function filterFoodOptions() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+    initializeThemeMode();
     await refreshFoodOptions();
 
     // Default the meal date to today and prevent selecting future dates.
