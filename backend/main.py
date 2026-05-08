@@ -1,9 +1,3 @@
-"""Application entrypoint: FastAPI app and route registration.
-
-This module creates the FastAPI `app`, applies middleware, initializes
-the database with seed data and mounts static files.
-"""
-
 import os
 
 from database import Base, engine
@@ -28,11 +22,6 @@ Base.metadata.create_all(bind=engine)
 
 
 def init_data():
-    """Seed initial data into the database if tables are empty.
-
-    Adds a default `User` and `UserTarget`, several `FoodItem` entries,
-    and example `Recipe` records when the corresponding tables are empty.
-    """
     from database import SessionLocal
     db = SessionLocal()
     try:
