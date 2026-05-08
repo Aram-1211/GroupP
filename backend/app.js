@@ -2,13 +2,178 @@
 const API_BASE = window.location.protocol === 'file:'
     ? 'http://localhost:8000'
     : window.location.origin;
+const THEME_STORAGE_KEY = 'nutrition-tracker-theme';
+const themeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+const WEEKLY_AXIS_HARD_CAP = 10000;
 let currentView = 'daily';
 let currentTarget = null;
 let foods = [];
 let weekChart = null;
 let currentChartMode = 'calories';
+let currentThemeSetting = 'auto';
+let currentWeekData = null;
+let currentSelectedDayStr = null;
+
+function readThemeSetting() {
+    try {
+        return localStorage.getItem(THEME_STORAGE_KEY) || 'auto';
+    } catch (error) {
+        return 'auto';
+    }
+}
+
+function storeThemeSetting(setting) {
+    try {
+        localStorage.setItem(THEME_STORAGE_KEY, setting);
+    } catch (error) {
+        // Ignore storage failures in restricted browser contexts.
+    }
+}
+
+function resolveTheme(setting) {
+    if (setting === 'dark') {
+        return 'dark';
+    }
+
+    if (setting === 'light') {
+        return 'light';
+    }
+
+    return themeMediaQuery.matches ? 'dark' : 'light';
+}
+
+function updateThemeButtons() {
+    const buttons = document.querySelectorAll('[data-theme-setting]');
+    buttons.forEach(button => {
+        const isActive = button.dataset.themeSetting === currentThemeSetting;
+        button.classList.toggle('btn-primary', isActive);
+        button.classList.toggle('btn-outline-secondary', !isActive);
+        button.classList.toggle('active', isActive);
+        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+}
+
+function getChartThemeColors() {
+    const styles = getComputedStyle(document.documentElement);
+    return {
+        text: styles.getPropertyValue('--text-primary').trim() || '#1f2937',
+        muted: styles.getPropertyValue('--text-secondary').trim() || '#666',
+        grid: styles.getPropertyValue('--border-color').trim() || '#e5e7eb',
+        surface: styles.getPropertyValue('--bg-secondary').trim() || '#ffffff'
+    };
+}
+
+function formatCompactNumber(value) {
+    const number = Number(value) || 0;
+
+    if (Math.abs(number) >= 1000000) {
+        return `${(number / 1000000).toFixed(number % 1000000 === 0 ? 0 : 1)}M`;
+    }
+
+    if (Math.abs(number) >= 1000) {
+        return `${(number / 1000).toFixed(number % 1000 === 0 ? 0 : 1)}K`;
+    }
+
+    return `${Math.round(number)}`;
+}
+
+function getWeeklyYAxisMax(values) {
+    const maxValue = Math.max(...values, 0);
+
+    if (maxValue <= 0) {
+        return 100;
+    }
+
+    const padded = maxValue * 1.15;
+    const magnitude = Math.pow(10, Math.floor(Math.log10(padded)));
+    const rounded = Math.ceil(padded / magnitude) * magnitude;
+    return Math.min(rounded, WEEKLY_AXIS_HARD_CAP);
+}
+
+function applyTheme(setting, persist = true) {
+    currentThemeSetting = setting;
+
+    if (persist) {
+        storeThemeSetting(setting);
+    }
+
+    const resolvedTheme = resolveTheme(setting);
+    document.documentElement.dataset.theme = resolvedTheme;
+    document.documentElement.dataset.themeSetting = setting;
+    document.documentElement.style.colorScheme = resolvedTheme;
+    updateThemeButtons();
+
+    if (weekChart) {
+        updateWeeklyChartTheme();
+    }
+}
+
+function initializeThemeMode() {
+    const storedSetting = readThemeSetting();
+    applyTheme(storedSetting, false);
+
+    document.querySelectorAll('[data-theme-setting]').forEach(button => {
+        button.addEventListener('click', () => applyTheme(button.dataset.themeSetting));
+    });
+
+    const onSystemThemeChange = () => {
+        if (currentThemeSetting === 'auto') {
+            applyTheme('auto', false);
+        }
+    };
+
+    if (typeof themeMediaQuery.addEventListener === 'function') {
+        themeMediaQuery.addEventListener('change', onSystemThemeChange);
+    } else if (typeof themeMediaQuery.addListener === 'function') {
+        themeMediaQuery.addListener(onSystemThemeChange);
+    }
+}
+
+function updateWeeklyChartTheme() {
+    if (!weekChart) {
+        return;
+    }
+
+    const themeColors = getChartThemeColors();
+    const datasets = weekChart.data.datasets || [];
+    const colorByLabel = {
+        Calories: '#0d6efd',
+        Protein: '#198754',
+        Fat: '#ffc107',
+        Carbs: '#dc3545'
+    };
+
+    datasets.forEach(dataset => {
+        dataset.backgroundColor = colorByLabel[dataset.label] || '#0d6efd';
+        dataset.borderColor = dataset.backgroundColor;
+    });
+
+    if (weekChart.options?.scales?.x) {
+        weekChart.options.scales.x.ticks.color = themeColors.text;
+        weekChart.options.scales.x.grid.color = themeColors.grid;
+    }
+
+    if (weekChart.options?.scales?.y) {
+        weekChart.options.scales.y.ticks.color = themeColors.text;
+        weekChart.options.scales.y.grid.color = themeColors.grid;
+    }
+
+    if (weekChart.options?.plugins?.legend?.labels) {
+        weekChart.options.plugins.legend.labels.color = themeColors.text;
+    }
+
+    if (weekChart.options?.plugins?.tooltip) {
+        weekChart.options.plugins.tooltip.backgroundColor = themeColors.surface;
+        weekChart.options.plugins.tooltip.titleColor = themeColors.text;
+        weekChart.options.plugins.tooltip.bodyColor = themeColors.text;
+    }
+
+    weekChart.update('none');
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
+    initializeThemeMode();
+    
     // Load the available food items for meal creation.
     try {
         const res = await fetch(`${API_BASE}/api/foods/`);
@@ -90,6 +255,51 @@ function formatMacro(value) {
     return Number(value || 0).toFixed(1);
 }
 
+function generateNutritionAdvice(totals) {
+    const TOLERANCE = 0.15; // 15% tolerance for acceptable range
+    const advice = [];
+    
+    // Check Calories
+    if (totals.calories < currentTarget.calories * (1 - TOLERANCE)) {
+        advice.push('You are consuming fewer calories than your target. Consider increasing portion sizes or adding more meals.');
+    } else if (totals.calories > currentTarget.calories * (1 + TOLERANCE)) {
+        advice.push('You are consuming more calories than your target. Try reducing portion sizes or choosing lower-calorie alternatives.');
+    } else {
+        advice.push('Your calorie intake is balanced.');
+    }
+    
+    // Check Protein
+    if (totals.protein < currentTarget.protein * (1 - TOLERANCE)) {
+        advice.push('Your protein intake is below target. Add more lean meats, fish, eggs, or legumes.');
+    } else if (totals.protein > currentTarget.protein * (1 + TOLERANCE)) {
+        advice.push('Your protein intake exceeds the target. You may want to adjust your portions.');
+    }
+    
+    // Check Fat
+    if (totals.fat < currentTarget.fat * (1 - TOLERANCE)) {
+        advice.push('Your fat intake is below target. Include more healthy fats from nuts, oils, or avocados.');
+    } else if (totals.fat > currentTarget.fat * (1 + TOLERANCE)) {
+        advice.push('Your fat intake is above target. Consider using less oil or choosing leaner food options.');
+    }
+    
+    // Check Carbs
+    if (totals.carbs < currentTarget.carbs * (1 - TOLERANCE)) {
+        advice.push('Your carbohydrate intake is below target. Eat more whole grains, fruits, or vegetables.');
+    } else if (totals.carbs > currentTarget.carbs * (1 + TOLERANCE)) {
+        advice.push('Your carbohydrate intake exceeds the target. Reduce portions of bread, rice, or pasta.');
+    }
+    
+    return advice.length > 0 ? advice.join(' ') : 'Your nutrition is well-balanced for today!';
+}
+
+function updateNutritionAdvice(totals) {
+    const advice = generateNutritionAdvice(totals);
+    const adviceCard = document.getElementById('advice-text');
+    if (adviceCard) {
+        adviceCard.textContent = advice;
+    }
+}
+
 function updateMacroSummary(totals = null) {
     if (!totals) totals = { calories: 0, protein: 0, fat: 0, carbs: 0 };
 
@@ -99,6 +309,8 @@ function updateMacroSummary(totals = null) {
         <div class="macro-item"><span>Fat</span><span><strong>${formatMacro(totals.fat)}</strong>g / ${formatMacro(currentTarget.fat)}g</span></div>
         <div class="macro-item"><span>Carbs</span><span><strong>${formatMacro(totals.carbs)}</strong>g / ${formatMacro(currentTarget.carbs)}g</span></div>
     `;
+    
+    updateNutritionAdvice(totals);
 }
 
 async function loadDayMeals(day) {
@@ -164,10 +376,13 @@ async function deleteMeal(mealId, selectedDayStr = null) {
 }
 
 async function loadWeekStats(weekStart, selectedDayStr = null) {
+    currentWeekData = null;
+    currentSelectedDayStr = selectedDayStr;
     const startStr = getLocalDateString(weekStart);
     try {
         const res = await fetch(`${API_BASE}/api/stats/week/${startStr}`);
         const data = await res.json();
+        currentWeekData = data;
 
         const endStr = data.week_end;
         document.getElementById('header-date').textContent =
@@ -178,17 +393,23 @@ async function loadWeekStats(weekStart, selectedDayStr = null) {
         const protein = data.daily_stats.map(d => d.protein);
         const fat = data.daily_stats.map(d => d.fat);
         const carbs = data.daily_stats.map(d => d.carbs);
+        const themeColors = getChartThemeColors();
+        const yAxisMax = getWeeklyYAxisMax(
+            currentChartMode === 'calories'
+                ? calories
+                : protein.map((p, index) => p * 4 + fat[index] * 9 + carbs[index] * 4)
+        );
 
         let datasets;
         if (currentChartMode === 'calories') {
             datasets = [
-                { label: 'Calories', data: calories, backgroundColor: '#0d6efd' }
+                { label: 'Calories', data: calories, backgroundColor: '#0d6efd', borderColor: '#0d6efd' }
             ];
         } else {
             datasets = [
-                { label: 'Protein', data: protein.map(p => p * 4), backgroundColor: '#198754', stack: 'macros' },
-                { label: 'Fat', data: fat.map(f => f * 9), backgroundColor: '#ffc107', stack: 'macros' },
-                { label: 'Carbs', data: carbs.map(c => c * 4), backgroundColor: '#dc3545', stack: 'macros' }
+                { label: 'Protein', data: protein.map(p => p * 4), backgroundColor: '#198754', borderColor: '#198754', stack: 'macros' },
+                { label: 'Fat', data: fat.map(f => f * 9), backgroundColor: '#ffc107', borderColor: '#ffc107', stack: 'macros' },
+                { label: 'Carbs', data: carbs.map(c => c * 4), backgroundColor: '#dc3545', borderColor: '#dc3545', stack: 'macros' }
             ];
         }
 
@@ -202,17 +423,42 @@ async function loadWeekStats(weekStart, selectedDayStr = null) {
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 scales: {
                     x: {
-                        beginAtZero: true
+                        ticks: {
+                            color: themeColors.text
+                        },
+                        grid: {
+                            color: themeColors.grid
+                        }
                     },
                     y: {
                         beginAtZero: true,
-                        stacked: currentChartMode === 'macronutrients'
+                        stacked: currentChartMode === 'macronutrients',
+                        max: yAxisMax,
+                        ticks: {
+                            color: themeColors.text,
+                            maxTicksLimit: 6,
+                            callback(value) {
+                                return formatCompactNumber(value);
+                            }
+                        },
+                        grid: {
+                            color: themeColors.grid
+                        }
                     }
                 },
                 plugins: {
+                    legend: {
+                        labels: {
+                            color: themeColors.text
+                        }
+                    },
                     tooltip: {
+                        backgroundColor: themeColors.surface,
+                        titleColor: themeColors.text,
+                        bodyColor: themeColors.text,
                         callbacks: {
                             label(context) {
                                 const label = context.dataset.label || '';
@@ -249,13 +495,12 @@ async function loadWeekStats(weekStart, selectedDayStr = null) {
         const dayButtonsContainer = document.getElementById('week-day-buttons');
         dayButtonsContainer.innerHTML = data.daily_stats.map((day, index) => `
                     <button 
-                        class="btn btn-sm btn-outline-secondary" 
+                        class="btn btn-sm btn-outline-secondary week-day-button" 
                         data-date="${day.date}"
-                        style="padding: 6px 4px; font-size: 0.75rem; width: 100%;"
                         onclick="selectDayByDateString('${day.date}')"
                     >
                         <div>${day.day_name}</div>
-                        <small style="display: block; line-height: 1.2;">${day.date}</small>
+                        <small>${day.date}</small>
                     </button>
                 `).join('');
 
@@ -290,6 +535,7 @@ function parseLocalDateString(dateStr) {
 
 async function loadSelectedDayMeals(day) {
     const dayStr = getLocalDateString(day);
+    currentSelectedDayStr = dayStr;
     document.getElementById('selected-day-title').textContent = `Selected Day: ${dayStr}`;
     try {
         const res = await fetch(`${API_BASE}/api/meals/day/${dayStr}`);
@@ -346,6 +592,7 @@ async function loadSelectedDailyMeals(day) {
 }
 
 async function selectDayByDateString(dateStr) {
+    currentSelectedDayStr = dateStr;
     // Highlight the selected day button first.
     const buttons = document.querySelectorAll('#week-day-buttons button');
     buttons.forEach(btn => {
@@ -373,7 +620,7 @@ function switchView(view) {
         const today = new Date();
         const weekStart = new Date(today);
         weekStart.setDate(today.getDate() - today.getDay() + 1);
-        loadWeekStats(weekStart);
+        loadWeekStats(weekStart, currentSelectedDayStr);
     }
 }
 
@@ -386,7 +633,7 @@ function switchChartMode(mode) {
         const today = new Date();
         const weekStart = new Date(today);
         weekStart.setDate(today.getDate() - today.getDay() + 1);
-        loadWeekStats(weekStart);
+        loadWeekStats(weekStart, currentSelectedDayStr);
     }
 }
 
@@ -427,7 +674,7 @@ async function addMeal(e) {
         const today = new Date();
         const weekStart = new Date(today);
         weekStart.setDate(today.getDate() - today.getDay() + 1);
-        await loadWeekStats(weekStart);
+        await loadWeekStats(weekStart, currentSelectedDayStr);
     }
 }
 
@@ -449,6 +696,12 @@ async function updateTarget(e) {
     bootstrap.Modal.getInstance(document.getElementById('editTargetModal')).hide();
     await loadTarget();
     if (currentView === 'daily') await loadDayMeals(new Date());
+    else {
+        const today = new Date();
+        const weekStart = new Date(today);
+        weekStart.setDate(today.getDate() - today.getDay() + 1);
+        await loadWeekStats(weekStart, currentSelectedDayStr);
+    }
 }
 
 async function loadRecipes() {
