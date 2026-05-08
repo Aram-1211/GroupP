@@ -77,8 +77,11 @@ function filterFoodOptions() {
 document.addEventListener('DOMContentLoaded', async () => {
     await refreshFoodOptions();
 
-    // Default the meal date to today.
-    document.getElementById('meal-date').value = new Date().toISOString().split('T')[0];
+    // Default the meal date to today and prevent selecting future dates.
+    const today = new Date().toISOString().split('T')[0];
+    const mealDateInput = document.getElementById('meal-date');
+    mealDateInput.value = today;
+    mealDateInput.max = today;
 
     // Load the user's macro target and initialize the dashboard.
     await loadTarget();
