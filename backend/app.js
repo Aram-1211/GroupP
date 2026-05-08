@@ -49,6 +49,30 @@ async function refreshFoodOptions(selectedFoodId = null) {
     }
 }
 
+function filterFoodOptions() {
+    const filterText = document.getElementById('meal-food-search').value.trim().toLowerCase();
+    const foodSelect = document.getElementById('meal-food');
+    foodSelect.innerHTML = '';
+
+    const matchingFoods = foods.filter(f => f.name.toLowerCase().includes(filterText));
+
+    if (matchingFoods.length === 0) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = 'No foods found';
+        opt.disabled = true;
+        foodSelect.appendChild(opt);
+        return;
+    }
+
+    matchingFoods.forEach(f => {
+        const opt = document.createElement('option');
+        opt.value = f.id;
+        opt.textContent = f.name;
+        foodSelect.appendChild(opt);
+    });
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     await refreshFoodOptions();
 
@@ -77,6 +101,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('add-meal-form').addEventListener('submit', addMeal);
     document.getElementById('custom-meal-form').addEventListener('submit', saveCustomMeal);
     document.getElementById('edit-target-form').addEventListener('submit', updateTarget);
+    document.getElementById('meal-food-search').addEventListener('input', filterFoodOptions);
 
     const showStandardMealFields = () => {
         document.getElementById('standard-meal-fields').style.display = '';
@@ -485,7 +510,9 @@ async function saveCustomMeal(e) {
         });
 
         if (!res.ok) {
-            throw new Error(`Failed to create food: ${res.status} ${res.statusText}`);
+            const error = await res.json();
+            alert(error.detail);
+            return;
         }
 
         const createdFood = await res.json();

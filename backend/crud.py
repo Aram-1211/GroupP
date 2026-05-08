@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from fastapi import HTTPException
 from datetime import date, timedelta
 from models import User, UserTarget, FoodItem, Meal, MealEntry, Recipe
 from schemas import MealCreate, TargetUpdate, MealOut, DaySummary, DailyStat, WeekSummary
@@ -38,6 +39,10 @@ def create_food(db: Session, food_data):
     fat = food_data.fat_per_100g * 9
     carbs = food_data.carbs_per_100g * 4
     calories = protein + fat + carbs
+
+    existing = db.query(FoodItem).filter(FoodItem.name == food_data.name).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Food item with this name already exists")
 
     food = FoodItem(
         name=food_data.name,
