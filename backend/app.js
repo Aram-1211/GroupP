@@ -176,38 +176,63 @@ function updateNutritionAnalysis(totals) {
     const targetFat = currentTarget.fat;
     const targetCarb = currentTarget.carbs;
 
+    const advice = [];
+
+    // Empty day
     if (cal === 0) {
         panel.textContent = "A new day. Add meals to begin tracking your nutrition.";
         return;
     }
 
+    // Calories exceeded
     if (cal > targetCal + 150) {
-        panel.textContent = "Your calorie intake is higher than your target. Consider choosing lower-calorie options and leaner foods to stay on track.";
-        return;
+        advice.push(
+            "Your calorie intake is above your target today. Consider lower-calorie choices and leaner foods tomorrow to stay on track."
+        );
     }
 
+    // Carbs exceeded
     if (carb > targetCarb * 1.15) {
-        panel.textContent = "Your carbohydrate intake is higher than your target. Try selecting lower-carb foods to better align with your goals.";
-        return;
+        advice.push(
+            "Your carbohydrate intake is higher than your target. Try reducing foods such as rice, bread, pasta, or sugary snacks."
+        );
     }
 
+    // Fat exceeded
     if (fat > targetFat * 1.05) {
-        panel.textContent = "Your fat intake is higher than your target. Opt for leaner food choices to reduce fat consumption.";
-        return;
+        advice.push(
+            "Your fat intake is above your target. Consider leaner protein choices and using less oil or butter."
+        );
     }
 
-    if (prot < targetProt * 0.6 && cal <= targetCal + 150 && carb <= targetCarb * 1.15 && fat <= targetFat * 1.05) {
-        panel.textContent = "You're partially on track with your nutrition. Boost your protein intake with foods like chicken breast, tuna, eggs, or Greek yogurt.";
-        return;
+    // Protein low while other targets acceptable
+    if (
+        prot < targetProt * 0.6 &&
+        cal <= targetCal + 150 &&
+        carb <= targetCarb * 1.15 &&
+        fat <= targetFat * 1.05
+    ) {
+        advice.push(
+            "You're partially on track with your nutrition today, but your protein intake could be higher. Try foods such as chicken breast, tuna, eggs, or Greek yogurt."
+        );
     }
 
-    if (prot > targetProt * 0.6 && cal <= targetCal + 150 && carb <= targetCarb * 1.15 && fat <= targetFat * 1.05) {
-        panel.textContent = "You're doing well with your nutrition targets. Keep up the great work!";
-        return;
+    // Positive on-track state
+    if (
+        prot >= targetProt * 0.6 &&
+        cal <= targetCal + 150 &&
+        carb <= targetCarb * 1.15 &&
+        fat <= targetFat * 1.05
+    ) {
+        advice.push(
+            "You're doing well with your nutrition targets today. Keep up the great work."
+        );
     }
 
-    // Default neutral message if no specific condition met
-    panel.textContent = "Keep tracking your meals to see how you align with your nutrition targets.";
+    panel.textContent =
+        advice.length > 0
+            ? advice.join(' ')
+            : "Keep tracking your meals to see how you align with your nutrition targets.";
 }
 
 async function loadDayMeals(day) {
