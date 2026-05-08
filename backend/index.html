@@ -37,6 +37,13 @@
                 <div id="macro-summary"></div>
             </div>
 
+            <div class="nutrition-analysis-panel">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="mb-0">Nutrition Analysis</h6>
+                </div>
+                <p class="mb-0 text-muted">Placeholder content: brief nutrition feedback will appear here for the selected daily or weekly view.</p>
+            </div>
+
             <div id="daily-view">
 
                 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -331,6 +338,32 @@
                                 id="target-carbs"
                                 required
                             >
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Weight (kg)</label>
+
+                            <input
+                                type="number"
+                                step="0.1"
+                                class="form-control"
+                                id="target-weight"
+                                placeholder="e.g. 70"
+                            >
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Nutrition Goal</label>
+
+                            <div class="d-flex gap-2 flex-wrap">
+                                <button type="button" class="btn btn-outline-secondary" id="goal-cut">Cut / Lose Weight</button>
+                                <button type="button" class="btn btn-outline-secondary" id="goal-maintain">Maintain Weight</button>
+                                <button type="button" class="btn btn-outline-secondary" id="goal-bulk">Bulk / Gain Weight</button>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div id="target-goal-guidance" class="border rounded p-3 bg-light text-muted" style="min-height: 80px;"></div>
                         </div>
 
                         <button

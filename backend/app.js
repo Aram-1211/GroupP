@@ -7,6 +7,7 @@ let currentTarget = null;
 let foods = [];
 let weekChart = null;
 let currentChartMode = 'calories';
+let selectedNutritionGoal = null;
 
 async function refreshFoodOptions(selectedFoodId = null) {
     const foodSelect = document.getElementById('meal-food');
@@ -118,6 +119,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('addMealModal').addEventListener('show.bs.modal', showStandardMealFields);
 
+    // Nutrition goal selection
+    const goalButtons = ['goal-cut', 'goal-maintain', 'goal-bulk'];
+    goalButtons.forEach(buttonId => {
+        document.getElementById(buttonId).addEventListener('click', () => selectNutritionGoal(buttonId));
+    });
+
+    // Weight input changes trigger macro calculation
+    document.getElementById('target-weight').addEventListener('input', calculateMacroTargets);
+
     updateChartModeButtons();
 });
 
@@ -148,6 +158,56 @@ function updateMacroSummary(totals = null) {
         <div class="macro-item"><span>Fat</span><span><strong>${formatMacro(totals.fat)}</strong>g / ${formatMacro(currentTarget.fat)}g</span></div>
         <div class="macro-item"><span>Carbs</span><span><strong>${formatMacro(totals.carbs)}</strong>g / ${formatMacro(currentTarget.carbs)}g</span></div>
     `;
+
+    updateNutritionAnalysis(totals);
+}
+
+function updateNutritionAnalysis(totals) {
+    const panel = document.querySelector('.nutrition-analysis-panel p');
+    if (!panel) return;
+
+    const cal = totals.calories || 0;
+    const prot = totals.protein || 0;
+    const fat = totals.fat || 0;
+    const carb = totals.carbs || 0;
+
+    const targetCal = currentTarget.calories;
+    const targetProt = currentTarget.protein;
+    const targetFat = currentTarget.fat;
+    const targetCarb = currentTarget.carbs;
+
+    if (cal === 0) {
+        panel.textContent = "A new day. Add meals to begin tracking your nutrition.";
+        return;
+    }
+
+    if (cal > targetCal + 150) {
+        panel.textContent = "Your calorie intake is higher than your target. Consider choosing lower-calorie options and leaner foods to stay on track.";
+        return;
+    }
+
+    if (carb > targetCarb * 1.15) {
+        panel.textContent = "Your carbohydrate intake is higher than your target. Try selecting lower-carb foods to better align with your goals.";
+        return;
+    }
+
+    if (fat > targetFat * 1.05) {
+        panel.textContent = "Your fat intake is higher than your target. Opt for leaner food choices to reduce fat consumption.";
+        return;
+    }
+
+    if (prot < targetProt * 0.6 && cal <= targetCal + 150 && carb <= targetCarb * 1.15 && fat <= targetFat * 1.05) {
+        panel.textContent = "You're partially on track with your nutrition. Boost your protein intake with foods like chicken breast, tuna, eggs, or Greek yogurt.";
+        return;
+    }
+
+    if (prot > targetProt * 0.6 && cal <= targetCal + 150 && carb <= targetCarb * 1.15 && fat <= targetFat * 1.05) {
+        panel.textContent = "You're doing well with your nutrition targets. Keep up the great work!";
+        return;
+    }
+
+    // Default neutral message if no specific condition met
+    panel.textContent = "Keep tracking your meals to see how you align with your nutrition targets.";
 }
 
 async function loadDayMeals(day) {
@@ -453,6 +513,60 @@ function updateChartModeButtons() {
         caloriesBtn.className = 'btn btn-sm btn-outline-primary';
         macrosBtn.className = 'btn btn-sm btn-primary';
     }
+}
+
+function selectNutritionGoal(buttonId) {
+    // Reset all buttons to outline-secondary
+    const goalButtons = ['goal-cut', 'goal-maintain', 'goal-bulk'];
+    goalButtons.forEach(id => {
+        document.getElementById(id).className = 'btn btn-outline-secondary';
+    });
+
+    // Set the selected button to primary
+    document.getElementById(buttonId).className = 'btn btn-primary';
+
+    // Store the selected goal and update guidance text
+    const guidanceBox = document.getElementById('target-goal-guidance');
+    if (buttonId === 'goal-cut') {
+        selectedNutritionGoal = 'cut';
+        guidanceBox.textContent = 'Placeholder guidance for cutting. Focus on creating a calorie deficit while maintaining adequate protein intake for muscle preservation.';
+    } else if (buttonId === 'goal-maintain') {
+        selectedNutritionGoal = 'maintain';
+        guidanceBox.textContent = 'Placeholder guidance for maintenance. Consume calories that match your daily energy expenditure to maintain current weight.';
+    } else if (buttonId === 'goal-bulk') {
+        selectedNutritionGoal = 'bulk';
+        guidanceBox.textContent = 'Placeholder guidance for bulking. Focus on a calorie surplus with adequate protein to support muscle growth and recovery.';
+    }
+
+    // Calculate and populate macro targets
+    calculateMacroTargets();
+}
+
+function calculateMacroTargets() {
+    const weight = parseFloat(document.getElementById('target-weight').value);
+    if (!weight || !selectedNutritionGoal) return;
+
+    let baseCalories;
+    if (selectedNutritionGoal === 'cut') {
+        baseCalories = weight * 25; // 25 kcal per kg for cutting
+    } else if (selectedNutritionGoal === 'maintain') {
+        baseCalories = weight * 30; // 30 kcal per kg for maintenance
+    } else if (selectedNutritionGoal === 'bulk') {
+        baseCalories = weight * 35; // 35 kcal per kg for bulking
+    }
+
+    const protein = weight * 1.6; // 1.6g protein per kg body weight
+    const fat = weight * 1.0; // 1.0g fat per kg body weight
+    const proteinCalories = protein * 4;
+    const fatCalories = fat * 9;
+    const carbCalories = baseCalories - proteinCalories - fatCalories;
+    const carbs = carbCalories / 4;
+
+    // Populate the form inputs
+    document.getElementById('target-calories').value = Math.round(baseCalories);
+    document.getElementById('target-protein').value = protein.toFixed(1);
+    document.getElementById('target-fat').value = fat.toFixed(1);
+    document.getElementById('target-carbs').value = Math.max(0, carbs.toFixed(1));
 }
 
 async function addMeal(e) {

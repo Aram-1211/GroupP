@@ -49,6 +49,25 @@ body {
     box-shadow: 0 2px 12px rgba(0,0,0,0.06);
 }
 
+.nutrition-analysis-panel {
+    background: white;
+    border-radius: 18px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+.nutrition-analysis-panel h6 {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.nutrition-analysis-panel p {
+    margin-bottom: 0;
+    color: #6c757d;
+    line-height: 1.5;
+}
+
 .macro-item {
     display: flex;
     justify-content: space-between;
@@ -87,6 +106,10 @@ select:focus {
 
     .macro-card {
         padding: 32px;
+    }
+
+    .nutrition-analysis-panel {
+        padding: 20px 24px;
     }
 
     #weekly-view {
