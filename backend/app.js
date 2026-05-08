@@ -9,9 +9,50 @@ let currentTarget = null;
 let foods = [];
 let weekChart = null;
 let currentChartMode = 'calories';
-let selectedNutritionGoal = null;
+let selectedNutritionGoal = 'maintain';
 let currentWeekStart = null;
 let currentThemeSetting = 'auto';
+
+const NUTRITION_GOAL_THEMES = {
+    cut: {
+        color: '#2f9e44',
+        hover: '#237032',
+        soft: '#e9f8ec',
+        border: '#bde8c7'
+    },
+    maintain: {
+        color: '#0d6efd',
+        hover: '#0a58ca',
+        soft: '#e7f2ff',
+        border: '#b7d8ff'
+    },
+    bulk: {
+        color: '#e03131',
+        hover: '#b02a37',
+        soft: '#fff0f0',
+        border: '#ffc9c9'
+    }
+};
+
+function getAccentColor() {
+    return getComputedStyle(document.documentElement).getPropertyValue('--accent-color').trim() || '#0d6efd';
+}
+
+function applyNutritionGoalTheme(goal) {
+    const theme = NUTRITION_GOAL_THEMES[goal] || NUTRITION_GOAL_THEMES.maintain;
+    const root = document.documentElement;
+
+    root.dataset.nutritionGoal = goal;
+    root.style.setProperty('--accent-color', theme.color);
+    root.style.setProperty('--accent-hover', theme.hover);
+    root.style.setProperty('--accent-soft', theme.soft);
+    root.style.setProperty('--accent-border', theme.border);
+
+    if (weekChart && currentChartMode === 'calories') {
+        weekChart.data.datasets[0].backgroundColor = theme.color;
+        weekChart.update();
+    }
+}
 
 // Dark MOde functions
 function readThemeSetting() {
@@ -214,6 +255,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     goalButtons.forEach(buttonId => {
         document.getElementById(buttonId).addEventListener('click', () => selectNutritionGoal(buttonId));
     });
+    updateNutritionGoalButtons('goal-maintain');
+    applyNutritionGoalTheme('maintain');
 
     // Weight input changes trigger macro calculation
     document.getElementById('target-weight').addEventListener('input', calculateMacroTargets);
@@ -436,7 +479,7 @@ async function loadWeekStats(weekStart, selectedDayStr = null) {
         let datasets;
         if (currentChartMode === 'calories') {
             datasets = [
-                { label: 'Calories', data: calories, backgroundColor: '#0d6efd' }
+                { label: 'Calories', data: calories, backgroundColor: getAccentColor() }
             ];
         } else {
             datasets = [
@@ -663,15 +706,17 @@ function updateChartModeButtons() {
     }
 }
 
-function selectNutritionGoal(buttonId) {
-    // Reset all buttons to outline-secondary
+function updateNutritionGoalButtons(selectedButtonId) {
     const goalButtons = ['goal-cut', 'goal-maintain', 'goal-bulk'];
     goalButtons.forEach(id => {
         document.getElementById(id).className = 'btn btn-outline-secondary';
     });
 
-    // Set the selected button to primary
-    document.getElementById(buttonId).className = 'btn btn-primary';
+    document.getElementById(selectedButtonId).className = 'btn btn-primary';
+}
+
+function selectNutritionGoal(buttonId) {
+    updateNutritionGoalButtons(buttonId);
 
     // Store the selected goal and update guidance text
     const guidanceBox = document.getElementById('target-goal-guidance');
@@ -685,6 +730,8 @@ function selectNutritionGoal(buttonId) {
         selectedNutritionGoal = 'bulk';
         guidanceBox.textContent = 'Placeholder guidance for bulking. Focus on a calorie surplus with adequate protein to support muscle growth and recovery.';
     }
+
+    applyNutritionGoalTheme(selectedNutritionGoal);
 
     // Calculate and populate macro targets
     calculateMacroTargets();
