@@ -1,3 +1,10 @@
+/* GENERATIVE AI DISCLAIMER: Gen-AI tools (CoPilot and ChatGPT) were used throughout frontend development in a supportive capacity, as explicitly allowed in the project specifications. 
+The frontend layouts, UX Decisions, feature requirements, etc were all designed and specified manually based on the personas, job stories, UX testing etc. 
+Gen-AI was then used to implement these wireframes and context into HTML/CSS/JS code, debug frontend issues, improve styling and identifying accessibility issues, and explaining frontend concepts for implementation purposes.
+All AI-supported code was reviewed, modified, tested and approved manually as part of the development process.
+Gen-AI was used as a development and implementation support tool rather than a replacement for UX design, implementation and concept understanding, or testing.
+*/
+
 :root {
     --bg-primary: #f4f6f9;
     --bg-secondary: #ffffff;
@@ -289,4 +296,85 @@ select:focus {
 
 .text-muted {
     color: #495057 !important;
+}
+
+html[data-theme='dark'] .text-muted,
+html[data-theme='dark'] .nutrition-analysis-panel p {
+    color: var(--text-secondary) !important;
+}
+
+html[data-theme='dark'] .bg-light {
+    background-color: #232323 !important;
+}
+
+html[data-theme='dark'] .border {
+    border-color: var(--border-color) !important;
+}
+
+html[data-theme='dark'] .btn-outline-secondary {
+    background-color: #242424;
+    color: var(--text-secondary);
+    border-color: #555;
+}
+
+html[data-theme='dark'] .btn-outline-secondary:hover,
+html[data-theme='dark'] .btn-outline-secondary:active {
+    background-color: #3a3a3a;
+    border-color: #6a6a6a;
+    color: var(--text-primary);
+}
+
+html[data-theme='dark'] .btn-outline-secondary:focus {
+    background-color: #242424;
+    border-color: #6a6a6a;
+    color: var(--text-primary);
+    box-shadow: none;
+}
+
+html[data-theme='dark'] .btn-outline-primary {
+    background-color: #242424;
+    color: color-mix(in srgb, var(--accent-color) 72%, white);
+    border-color: color-mix(in srgb, var(--accent-color) 55%, #555);
+}
+
+html[data-theme='dark'] .btn-outline-primary:focus {
+    background-color: #242424;
+    color: color-mix(in srgb, var(--accent-color) 72%, white);
+    border-color: color-mix(in srgb, var(--accent-color) 65%, #666);
+    box-shadow: none;
+}
+
+html[data-theme='dark'] .form-control::placeholder {
+    color: #8f8f8f;
+}
+
+html[data-theme='dark'] .week-day-btn.future-day,
+html[data-theme='dark'] .week-day-btn.future-day:disabled {
+    background-color: #202020;
+    border-color: #353535;
+    color: #777;
+}
+
+html[data-theme='dark'] #goal-cut.btn-outline-secondary {
+    background-color: #242824;
+    border-color: #365f3d;
+    color: #8fd99d;
+}
+
+html[data-theme='dark'] #goal-maintain.btn-outline-secondary {
+    background-color: #23272c;
+    border-color: #3a5f88;
+    color: #94c3f7;
+}
+
+html[data-theme='dark'] #goal-bulk.btn-outline-secondary {
+    background-color: #2b2424;
+    border-color: #743c3c;
+    color: #f5a0a0;
+}
+
+html[data-theme='dark'] #recipes-list pre {
+    background-color: #232323 !important;
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
 }
