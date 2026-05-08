@@ -8,41 +8,49 @@ let foods = [];
 let weekChart = null;
 let currentChartMode = 'calories';
 
-document.addEventListener('DOMContentLoaded', async () => {
-    // Load the available food items for meal creation.
+async function refreshFoodOptions(selectedFoodId = null) {
+    const foodSelect = document.getElementById('meal-food');
+    foodSelect.innerHTML = '';
+
     try {
         const res = await fetch(`${API_BASE}/api/foods/`);
         if (!res.ok) {
-            console.error('Failed to fetch foods:', res.status, res.statusText);
             throw new Error(`HTTP error! status: ${res.status}`);
         }
-        foods = await res.json();
-        console.log('Foods loaded:', foods);
 
-        const foodSelect = document.getElementById('meal-food');
+        foods = await res.json();
+
         if (foods.length === 0) {
             const opt = document.createElement('option');
             opt.value = '';
             opt.textContent = 'No foods available';
             opt.disabled = true;
             foodSelect.appendChild(opt);
-        } else {
-            foods.forEach(f => {
-                const opt = document.createElement('option');
-                opt.value = f.id;
-                opt.textContent = f.name;
-                foodSelect.appendChild(opt);
-            });
+            return;
+        }
+
+        foods.forEach(f => {
+            const opt = document.createElement('option');
+            opt.value = f.id;
+            opt.textContent = f.name;
+            foodSelect.appendChild(opt);
+        });
+
+        if (selectedFoodId !== null) {
+            foodSelect.value = selectedFoodId;
         }
     } catch (e) {
         console.error('Cannot load foods:', e);
-        const foodSelect = document.getElementById('meal-food');
         const opt = document.createElement('option');
         opt.value = '';
         opt.textContent = 'Error loading foods';
         opt.disabled = true;
         foodSelect.appendChild(opt);
     }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    await refreshFoodOptions();
 
     // Default the meal date to today.
     document.getElementById('meal-date').value = new Date().toISOString().split('T')[0];
@@ -67,7 +75,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         new bootstrap.Modal(document.getElementById('editTargetModal')).show();
     });
     document.getElementById('add-meal-form').addEventListener('submit', addMeal);
+    document.getElementById('custom-meal-form').addEventListener('submit', saveCustomMeal);
     document.getElementById('edit-target-form').addEventListener('submit', updateTarget);
+
+    const showStandardMealFields = () => {
+        document.getElementById('standard-meal-fields').style.display = '';
+        document.getElementById('custom-meal-fields').style.display = 'none';
+    };
+
+    const showCustomMealFields = () => {
+        document.getElementById('standard-meal-fields').style.display = 'none';
+        document.getElementById('custom-meal-fields').style.display = '';
+    };
+
+    document.getElementById('btn-create-custom-meal').addEventListener('click', showCustomMealFields);
+    document.getElementById('btn-back-standard-meal').addEventListener('click', showStandardMealFields);
+
+    document.getElementById('addMealModal').addEventListener('show.bs.modal', showStandardMealFields);
 
     updateChartModeButtons();
 });
@@ -433,6 +457,46 @@ async function addMeal(e) {
         const weekStart = new Date(today);
         weekStart.setDate(today.getDate() - today.getDay() + 1);
         await loadWeekStats(weekStart);
+    }
+}
+
+async function saveCustomMeal(e) {
+    e.preventDefault();
+
+    const name = document.getElementById('custom-meal-name').value.trim();
+    const protein = parseFloat(document.getElementById('custom-meal-protein').value) || 0;
+    const fat = parseFloat(document.getElementById('custom-meal-fat').value) || 0;
+    const carbs = parseFloat(document.getElementById('custom-meal-carbs').value) || 0;
+    const calories = protein * 4 + fat * 9 + carbs * 4;
+
+    const newFood = {
+        name,
+        calories_per_100g: calories,
+        protein_per_100g: protein,
+        fat_per_100g: fat,
+        carbs_per_100g: carbs
+    };
+
+    try {
+        const res = await fetch(`${API_BASE}/api/foods/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newFood)
+        });
+
+        if (!res.ok) {
+            throw new Error(`Failed to create food: ${res.status} ${res.statusText}`);
+        }
+
+        const createdFood = await res.json();
+        console.log('Created custom food:', createdFood);
+
+        await refreshFoodOptions(createdFood.id);
+        document.getElementById('custom-meal-form').reset();
+        document.getElementById('standard-meal-fields').style.display = '';
+        document.getElementById('custom-meal-fields').style.display = 'none';
+    } catch (error) {
+        console.error('Custom food creation failed:', error);
     }
 }
 
