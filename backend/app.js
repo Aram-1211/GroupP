@@ -8,6 +8,7 @@ let foods = [];
 let weekChart = null;
 let currentChartMode = 'calories';
 let selectedNutritionGoal = null;
+let currentWeekStart = null;
 
 async function refreshFoodOptions(selectedFoodId = null) {
     const foodSelect = document.getElementById('meal-food');
@@ -92,6 +93,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btn-weekly').addEventListener('click', () => switchView('weekly'));
     document.getElementById('btn-calories').addEventListener('click', () => switchChartMode('calories'));
     document.getElementById('btn-macronutrients').addEventListener('click', () => switchChartMode('macronutrients'));
+    document.getElementById('btn-prev-week').addEventListener('click', () => navigateWeek(-1));
+    document.getElementById('btn-next-week').addEventListener('click', () => navigateWeek(1));
     document.getElementById('btn-add-meal').addEventListener('click', () => {
         new bootstrap.Modal(document.getElementById('addMealModal')).show();
     });
@@ -300,6 +303,36 @@ async function deleteMeal(mealId, selectedDayStr = null) {
     }
 }
 
+function getWeekStart(date) {
+    const weekStart = new Date(date);
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
+    weekStart.setHours(0, 0, 0, 0);
+    return weekStart;
+}
+
+function updateWeekNavigationButtons() {
+    const nextWeekButton = document.getElementById('btn-next-week');
+    if (!currentWeekStart || !nextWeekButton) return;
+
+    const currentMonday = getWeekStart(new Date());
+    nextWeekButton.disabled = currentWeekStart.getTime() >= currentMonday.getTime();
+}
+
+async function navigateWeek(offset) {
+    if (!currentWeekStart) return;
+
+    const targetStart = new Date(currentWeekStart);
+    targetStart.setDate(targetStart.getDate() + offset * 7);
+    targetStart.setHours(0, 0, 0, 0);
+
+    const currentMonday = getWeekStart(new Date());
+    if (targetStart.getTime() > currentMonday.getTime()) {
+        return;
+    }
+
+    await loadWeekStats(targetStart);
+}
+
 async function loadWeekStats(weekStart, selectedDayStr = null) {
     const startStr = getLocalDateString(weekStart);
     try {
@@ -384,6 +417,9 @@ async function loadWeekStats(weekStart, selectedDayStr = null) {
                 }
             }
         });
+
+        currentWeekStart = getWeekStart(weekStart);
+        updateWeekNavigationButtons();
 
         // Render clickable day buttons for the weekly stats view.
         const dayButtonsContainer = document.getElementById('week-day-buttons');
