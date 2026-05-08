@@ -221,16 +221,31 @@ select:focus {
 }
 
 .btn-outline-primary:hover,
-.btn-outline-primary:focus,
 .btn-outline-primary:active {
     background-color: var(--accent-hover) !important;
     border-color: var(--accent-hover) !important;
     color: white;
 }
 
+.btn-outline-primary:focus {
+    background-color: transparent;
+    border-color: var(--accent-hover);
+    color: var(--accent-hover);
+    box-shadow: none;
+}
+
 .btn-outline-primary:disabled {
     color: var(--accent-hover);
     border-color: var(--accent-hover);
+}
+
+.week-day-btn.future-day,
+.week-day-btn.future-day:disabled {
+    background-color: var(--bg-primary);
+    border-color: var(--border-color);
+    color: var(--text-secondary);
+    cursor: not-allowed;
+    opacity: 0.55;
 }
 
 #goal-cut.btn-outline-secondary {

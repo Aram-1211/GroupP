@@ -38,6 +38,30 @@ function getAccentColor() {
     return getComputedStyle(document.documentElement).getPropertyValue('--accent-color').trim() || '#0d6efd';
 }
 
+const emptyWeekChartPlugin = {
+    id: 'emptyWeekChartMessage',
+    afterDraw(chart) {
+        if (!chart.options.plugins.emptyWeekMessage?.display) return;
+
+        const { ctx, chartArea } = chart;
+        if (!chartArea) return;
+
+        ctx.save();
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-secondary').trim() || '#6c757d';
+        ctx.font = '600 16px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(
+            'No entries this week',
+            (chartArea.left + chartArea.right) / 2,
+            (chartArea.top + chartArea.bottom) / 2
+        );
+        ctx.restore();
+    }
+};
+
+Chart.register(emptyWeekChartPlugin);
+
 function applyNutritionGoalTheme(goal) {
     const theme = NUTRITION_GOAL_THEMES[goal] || NUTRITION_GOAL_THEMES.maintain;
     const root = document.documentElement;
@@ -50,7 +74,24 @@ function applyNutritionGoalTheme(goal) {
 
     if (weekChart && currentChartMode === 'calories') {
         weekChart.data.datasets[0].backgroundColor = theme.color;
-        weekChart.update();
+        weekChart.update('none');
+    }
+}
+
+async function preserveScrollPosition(callback) {
+    const left = window.scrollX;
+    const top = window.scrollY;
+
+    try {
+        return await callback();
+    } finally {
+        requestAnimationFrame(() => {
+            window.scrollTo(left, top);
+
+            setTimeout(() => {
+                window.scrollTo(left, top);
+            }, 0);
+        });
     }
 }
 
@@ -255,8 +296,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     goalButtons.forEach(buttonId => {
         document.getElementById(buttonId).addEventListener('click', () => selectNutritionGoal(buttonId));
     });
-    updateNutritionGoalButtons('goal-maintain');
-    applyNutritionGoalTheme('maintain');
+    selectNutritionGoal('goal-maintain');
 
     // Weight input changes trigger macro calculation
     document.getElementById('target-weight').addEventListener('input', calculateMacroTargets);
@@ -390,7 +430,7 @@ async function loadDayMeals(day) {
         mealsList.innerHTML = data.meals.map(m => `
                     <div class="meal-item">
     <div class="d-flex justify-content-between">
-        <h6>${m.name}</h6>
+        <h6>${m.name} - ${m.quantity}g</h6>
 
         <button
             class="btn btn-sm btn-outline-danger"
@@ -399,10 +439,6 @@ async function loadDayMeals(day) {
             ×
         </button>
     </div>
-
-    <p class="text-muted small mb-0">
-        ${m.food_name} - ${m.quantity}g
-    </p>
 
     <small>
         Cal: ${formatCalories(m.calories)}
@@ -424,9 +460,9 @@ async function deleteMeal(mealId, selectedDayStr = null) {
         const selectedDay = parseLocalDateString(selectedDayStr);
         const weekStart = new Date(selectedDay);
         weekStart.setDate(selectedDay.getDate() - selectedDay.getDay() + 1);
-        await loadWeekStats(weekStart, selectedDayStr);
+        await preserveScrollPosition(() => loadWeekStats(weekStart, selectedDayStr));
     } else {
-        await loadDayMeals(new Date());
+        await preserveScrollPosition(() => loadDayMeals(new Date()));
     }
 }
 
@@ -457,10 +493,10 @@ async function navigateWeek(offset) {
         return;
     }
 
-    await loadWeekStats(targetStart);
+    await preserveScrollPosition(() => loadWeekStats(targetStart, null, true));
 }
 
-async function loadWeekStats(weekStart, selectedDayStr = null) {
+async function loadWeekStats(weekStart, selectedDayStr = null, animateChart = false) {
     const startStr = getLocalDateString(weekStart);
     try {
         const res = await fetch(`${API_BASE}/api/stats/week/${startStr}`);
@@ -471,102 +507,128 @@ async function loadWeekStats(weekStart, selectedDayStr = null) {
             `Your Week - ${data.week_start} → ${endStr}`;
 
         const labels = data.daily_stats.map(d => d.day_name);
-        const calories = data.daily_stats.map(d => d.calories);
         const protein = data.daily_stats.map(d => d.protein);
         const fat = data.daily_stats.map(d => d.fat);
         const carbs = data.daily_stats.map(d => d.carbs);
+        const macroCalories = data.daily_stats.map(d =>
+            Number(d.protein) * 4 +
+            Number(d.fat) * 9 +
+            Number(d.carbs) * 4
+        );
+        const hasWeekEntries = data.daily_stats.some(d =>
+            Number(d.calories) > 0 ||
+            Number(d.protein) > 0 ||
+            Number(d.fat) > 0 ||
+            Number(d.carbs) > 0
+        );
 
         let datasets;
         if (currentChartMode === 'calories') {
             datasets = [
-                { label: 'Calories', data: calories, backgroundColor: getAccentColor() }
+                { label: 'Calories', data: macroCalories, backgroundColor: getAccentColor() }
             ];
         } else {
             datasets = [
-                { label: 'Protein', data: protein.map(p => p * 4), backgroundColor: '#198754', stack: 'macros' },
+                { label: 'Protein', data: protein.map(p => p * 4), backgroundColor: '#8b0000', stack: 'macros' },
                 { label: 'Fat', data: fat.map(f => f * 9), backgroundColor: '#ffc107', stack: 'macros' },
-                { label: 'Carbs', data: carbs.map(c => c * 4), backgroundColor: '#dc3545', stack: 'macros' }
+                { label: 'Carbs', data: carbs.map(c => c * 4), backgroundColor: '#006400', stack: 'macros' }
             ];
         }
 
-        if (weekChart) weekChart.destroy();
-        const ctx = document.getElementById('week-chart').getContext('2d');
-        weekChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels,
-                datasets
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    x: {
-                        beginAtZero: true,
-                        ticks: {
-                            display: false
-                        }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        stacked: currentChartMode === 'macronutrients'
+        const chartOptions = {
+            responsive: true,
+            animation: animateChart,
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    ticks: {
+                        display: false
                     }
                 },
-                plugins: {
-                    tooltip: {
-                        callbacks: {
-                            label(context) {
-                                const label = context.dataset.label || '';
-                                const value = context.parsed?.y ?? context.parsed ?? 0;
+                y: {
+                    beginAtZero: true,
+                    stacked: currentChartMode === 'macronutrients'
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label(context) {
+                            const label = context.dataset.label || '';
+                            const value = context.parsed?.y ?? context.parsed ?? 0;
 
-                                if (label === 'Protein' || label === 'Fat' || label === 'Carbs') {
-                                    let grams;
-                                    if (label === 'Protein' || label === 'Carbs') {
-                                        grams = value / 4;
-                                    } else if (label === 'Fat') {
-                                        grams = value / 9;
-                                    }
-                                    return `${label}: ${formatCalories(value)} kcal (${formatMacro(grams)}g)`;
-                                } else {
-                                    return `${label}: ${formatCalories(value)}`;
+                            if (label === 'Protein' || label === 'Fat' || label === 'Carbs') {
+                                let grams;
+                                if (label === 'Protein' || label === 'Carbs') {
+                                    grams = value / 4;
+                                } else if (label === 'Fat') {
+                                    grams = value / 9;
                                 }
+                                return `${label}: ${formatCalories(value)} kcal (${formatMacro(grams)}g)`;
+                            } else {
+                                return `${label}: ${formatCalories(value)}`;
                             }
                         }
                     }
                 },
-                onClick: async (e) => {
-                    const points = weekChart.getElementsAtEventForMode(e, 'nearest', { intersect: false }, true);
+                emptyWeekMessage: {
+                    display: !hasWeekEntries
+                }
+            },
+            onClick: async (e) => {
+                const points = weekChart.getElementsAtEventForMode(e, 'nearest', { intersect: false }, true);
 
-                    if (points.length) {
-                        const index = points[0].index;
-                        const dayDate = data.daily_stats[index].date;
-                        await selectDayByDateString(dayDate);
-                    }
+                if (points.length) {
+                    const index = points[0].index;
+                    const dayDate = data.daily_stats[index].date;
+                    await selectDayByDateString(dayDate);
                 }
             }
-        });
+        };
+
+        if (weekChart) {
+            weekChart.data.labels = labels;
+            weekChart.data.datasets = datasets;
+            weekChart.options = chartOptions;
+            weekChart.update(animateChart ? undefined : 'none');
+        } else {
+            const ctx = document.getElementById('week-chart').getContext('2d');
+            weekChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets
+                },
+                options: chartOptions
+            });
+        }
 
         currentWeekStart = getWeekStart(weekStart);
         updateWeekNavigationButtons();
 
+        const today = getLocalDateString(new Date());
+
         // Render clickable day buttons for the weekly stats view.
         const dayButtonsContainer = document.getElementById('week-day-buttons');
-        dayButtonsContainer.innerHTML = data.daily_stats.map((day, index) => `
+        dayButtonsContainer.innerHTML = data.daily_stats.map(day => {
+            const isFutureDay = day.date > today;
+            return `
                     <button 
-                        class="btn btn-sm btn-outline-secondary" 
+                        class="btn btn-sm btn-outline-secondary week-day-btn${isFutureDay ? ' future-day' : ''}" 
                         data-date="${day.date}"
                         style="padding: 6px 4px; font-size: 0.75rem; width: 100%;"
-                        onclick="selectDayByDateString('${day.date}')"
+                        ${isFutureDay ? 'disabled aria-disabled="true"' : `onclick="selectDayByDateString('${day.date}')"` }
                     >
                         <div>${day.day_name}</div>
                         <small style="display: block; line-height: 1.2;">${day.date}</small>
                     </button>
-                `).join('');
+                `;
+        }).join('');
 
         // Select the preserved selected day if provided, otherwise default to today or first day.
-        if (selectedDayStr) {
+        if (selectedDayStr && selectedDayStr <= today) {
             await selectDayByDateString(selectedDayStr);
         } else {
-            const today = getLocalDateString(new Date());
             const todayStats = data.daily_stats.find(d => d.date === today);
             if (todayStats) {
                 await selectDayByDateString(todayStats.date);
@@ -614,7 +676,7 @@ async function loadSelectedDayMeals(day) {
                     ${data.meals.map(m => `
                         <div class="meal-item">
                             <div class="d-flex justify-content-between">
-                                <h6>${m.name}</h6>
+                                <h6>${m.name} - ${m.quantity}g</h6>
                                 <button
                                     class="btn btn-sm btn-outline-danger"
                                     onclick="deleteMeal(${m.id}, '${dayStr}')"
@@ -622,7 +684,12 @@ async function loadSelectedDayMeals(day) {
                                     ×
                                 </button>
                             </div>
-                            <p class="text-muted small mb-0">${m.food_name} - ${m.quantity}g</p>
+                            <small>
+                                Cal: ${formatCalories(m.calories)}
+                                | P: ${formatMacro(m.protein)}g
+                                | F: ${formatMacro(m.fat)}g
+                                | C: ${formatMacro(m.carbs)}g
+                            </small>
                         </div>
                     `).join('')}
                 `;
@@ -632,6 +699,8 @@ async function loadSelectedDayMeals(day) {
 }
 
 async function loadSelectedDailyMeals(day) {
+    if (getLocalDateString(day) > getLocalDateString(new Date())) return;
+
     await loadSelectedDayMeals(day);
 
     // Highlight the selected day button in the week view.
@@ -649,9 +718,13 @@ async function loadSelectedDailyMeals(day) {
 }
 
 async function selectDayByDateString(dateStr) {
+    if (dateStr > getLocalDateString(new Date())) return;
+
     // Highlight the selected day button first.
     const buttons = document.querySelectorAll('#week-day-buttons button');
     buttons.forEach(btn => {
+        if (btn.disabled) return;
+
         if (btn.dataset.date === dateStr) {
             btn.classList.remove('btn-outline-secondary');
             btn.classList.add('btn-primary');
@@ -665,18 +738,19 @@ async function selectDayByDateString(dateStr) {
 }
 
 function switchView(view) {
+    const wasWeekly = currentView === 'weekly';
     currentView = view;
     document.getElementById('daily-view').style.display = view === 'daily' ? 'block' : 'none';
     document.getElementById('weekly-view').style.display = view === 'weekly' ? 'block' : 'none';
     document.getElementById('btn-daily').className = view === 'daily' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-outline-primary';
     document.getElementById('btn-weekly').className = view === 'weekly' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-outline-primary';
 
-    if (view === 'daily') loadDayMeals(new Date());
+    if (view === 'daily') preserveScrollPosition(() => loadDayMeals(new Date()));
     else {
         const today = new Date();
         const weekStart = new Date(today);
         weekStart.setDate(today.getDate() - today.getDay() + 1);
-        loadWeekStats(weekStart);
+        preserveScrollPosition(() => loadWeekStats(weekStart, null, !wasWeekly));
     }
 }
 
@@ -686,10 +760,8 @@ function switchChartMode(mode) {
     updateChartModeButtons();
 
     if (currentView === 'weekly') {
-        const today = new Date();
-        const weekStart = new Date(today);
-        weekStart.setDate(today.getDate() - today.getDay() + 1);
-        loadWeekStats(weekStart);
+        const weekStart = currentWeekStart || getWeekStart(new Date());
+        preserveScrollPosition(() => loadWeekStats(weekStart));
     }
 }
 
@@ -722,13 +794,13 @@ function selectNutritionGoal(buttonId) {
     const guidanceBox = document.getElementById('target-goal-guidance');
     if (buttonId === 'goal-cut') {
         selectedNutritionGoal = 'cut';
-        guidanceBox.textContent = 'Placeholder guidance for cutting. Focus on creating a calorie deficit while maintaining adequate protein intake for muscle preservation.';
+        guidanceBox.textContent = "You'll be eating at a calorie deficit to lose weight. High protein is essential here to prevent muscle loss and target fat burning.";
     } else if (buttonId === 'goal-maintain') {
         selectedNutritionGoal = 'maintain';
-        guidanceBox.textContent = 'Placeholder guidance for maintenance. Consume calories that match your daily energy expenditure to maintain current weight.';
+        guidanceBox.textContent = "You'll be eating at your maintenance calories so that you don't gain or lose weight. Ensure protein is high to maintain and perhaps even gain muscle in the process. Activity here is crucial.";
     } else if (buttonId === 'goal-bulk') {
         selectedNutritionGoal = 'bulk';
-        guidanceBox.textContent = 'Placeholder guidance for bulking. Focus on a calorie surplus with adequate protein to support muscle growth and recovery.';
+        guidanceBox.textContent = "Bulking for muscle gain means you'll need to gain weight overall, so you'll be in a calorie surplus. Prioritize Protein and Carbs for muscle-building and performance.";
     }
 
     applyNutritionGoalTheme(selectedNutritionGoal);
@@ -781,17 +853,17 @@ async function addMeal(e) {
         body: JSON.stringify(meal)
     });
 
-    bootstrap.Modal.getInstance(document.getElementById('addMealModal')).hide();
-    document.getElementById('add-meal-form').reset();
-    document.getElementById('meal-date').value = new Date().toISOString().split('T')[0];
+    await preserveScrollPosition(async () => {
+        bootstrap.Modal.getInstance(document.getElementById('addMealModal')).hide();
+        document.getElementById('add-meal-form').reset();
+        document.getElementById('meal-date').value = new Date().toISOString().split('T')[0];
 
-    if (currentView === 'daily') await loadDayMeals(new Date());
-    else {
-        const today = new Date();
-        const weekStart = new Date(today);
-        weekStart.setDate(today.getDate() - today.getDay() + 1);
-        await loadWeekStats(weekStart);
-    }
+        if (currentView === 'daily') await loadDayMeals(new Date());
+        else {
+            const weekStart = currentWeekStart || getWeekStart(new Date());
+            await loadWeekStats(weekStart);
+        }
+    });
 }
 
 async function saveCustomMeal(e) {
@@ -851,9 +923,11 @@ async function updateTarget(e) {
         body: JSON.stringify(target)
     });
 
-    bootstrap.Modal.getInstance(document.getElementById('editTargetModal')).hide();
-    await loadTarget();
-    if (currentView === 'daily') await loadDayMeals(new Date());
+    await preserveScrollPosition(async () => {
+        bootstrap.Modal.getInstance(document.getElementById('editTargetModal')).hide();
+        await loadTarget();
+        if (currentView === 'daily') await loadDayMeals(new Date());
+    });
 }
 
 async function loadRecipes() {
