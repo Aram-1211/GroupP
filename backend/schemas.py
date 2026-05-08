@@ -12,6 +12,14 @@ class FoodItemOut(BaseModel):
     carbs_per_100g: float
     model_config = {"from_attributes": True}
 
+# Create New Food
+class FoodCreate(BaseModel):
+    name: str
+    calories_per_100g: float
+    protein_per_100g: float
+    fat_per_100g: float
+    carbs_per_100g: float
+
 # Target
 class TargetOut(BaseModel):
     calories: float

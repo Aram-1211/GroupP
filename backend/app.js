@@ -408,10 +408,12 @@ function updateChartModeButtons() {
 
 async function addMeal(e) {
     e.preventDefault();
+    const selectedFoodId = parseInt(document.getElementById('meal-food').value);
+    const selectedFood = foods.find(f => f.id === selectedFoodId);
     const meal = {
         date: document.getElementById('meal-date').value,
-        name: document.getElementById('meal-name').value,
-        food_id: parseInt(document.getElementById('meal-food').value),
+        name: selectedFood ? selectedFood.name : 'Meal',
+        food_id: selectedFoodId,
         quantity: parseFloat(document.getElementById('meal-quantity').value)
     };
 

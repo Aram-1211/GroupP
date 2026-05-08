@@ -33,6 +33,24 @@ def get_foods(db: Session, search: str = None):
         query = query.filter(FoodItem.name.ilike(f"%{search}%"))
     return query.all()
 
+def create_food(db: Session, food_data):
+    protein = food_data.protein_per_100g * 4
+    fat = food_data.fat_per_100g * 9
+    carbs = food_data.carbs_per_100g * 4
+    calories = protein + fat + carbs
+
+    food = FoodItem(
+        name=food_data.name,
+        calories_per_100g=calories,
+        protein_per_100g=food_data.protein_per_100g,
+        fat_per_100g=food_data.fat_per_100g,
+        carbs_per_100g=food_data.carbs_per_100g
+    )
+    db.add(food)
+    db.commit()
+    db.refresh(food)
+    return food 
+
 def create_meal(db: Session, meal_data: MealCreate, user_id: int = 1):
     meal = Meal(date=meal_data.date, meal_type=meal_data.name, user_id=user_id)
     db.add(meal)
