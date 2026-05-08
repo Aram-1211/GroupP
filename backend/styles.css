@@ -45,7 +45,7 @@ body {
     right: 0;
     background: var(--bg-secondary);
     backdrop-filter: blur(10px);
-    box-shadow: var([--shadow-nav]);
+    box-shadow: var(--shadow-nav);
     padding: 12px;
     display: flex;
     justify-content: center;
@@ -169,4 +169,41 @@ select:focus {
     #weekly-view {
         padding: 32px;
     }
+}
+
+.meal-item,
+.meal-item h6,
+.meal-item small,
+#selected-day-meals,
+#selected-day-meals h6,
+#selected-day-meals small,
+.nutrition-analysis-panel,
+.nutrition-analysis-panel h6,
+#weekly-view,
+#selected-day-title,
+.macro-item {
+    color: var(--text-primary);
+}
+
+.text-muted,
+.nutrition-analysis-panel p {
+    color: var(--text-secondary) !important;
+}
+
+.theme-toggle-btn {
+    filter: grayscale(100%);
+}
+
+.text-muted {
+    color: #495057 !important;
+}
+
+.btn-outline-primary {
+    color: #0a58ca;
+    border-color: #0a58ca;
+}
+
+.btn-outline-primary:hover {
+    background-color: #0a58ca;
+    color: white;
 }
