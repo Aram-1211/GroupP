@@ -204,7 +204,10 @@ async function loadWeekStats(weekStart, selectedDayStr = null) {
                 responsive: true,
                 scales: {
                     x: {
-                        beginAtZero: true
+                        beginAtZero: true,
+                        ticks: {
+                            display: false
+                        }
                     },
                     y: {
                         beginAtZero: true,
